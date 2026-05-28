@@ -1,8 +1,13 @@
 # Dependencies
 node_modules/
+.pnp
+.pnp.js
 
 # Build output
 dist/
+dist-ssr/
+build/
+*.local
 
 # Logs
 *.log
@@ -10,16 +15,31 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
 # Environment files
 .env
 .env.*
+!.env.example
 
-# OS/editor files
+# Editor directories and files
 .DS_Store
-.idea/
-.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# Local Codex/agent metadata
-.agents/
-skills-lock.json
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# OS files
+Thumbs.db
+.Spotlight-V100
+.Trashes

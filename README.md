@@ -1,8 +1,10 @@
-# TOTP Generator
+# Web Tools
 
-A simple client-side React app for generating 6-digit TOTP tokens from Base32 secrets.
+A collection of client-side web utilities built with React, starting with a TOTP token generator.
 
-## Features
+## Tools
+
+### TOTP Generator
 
 - RFC 6238 TOTP with HMAC-SHA1
 - 6-digit tokens

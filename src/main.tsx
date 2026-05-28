@@ -1,6 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Check, Clipboard, KeyRound, Moon, RefreshCw, Sun } from "lucide-react";
+import {
+  Check,
+  Clipboard,
+  Wrench,
+  Moon,
+  RefreshCw,
+  Sun,
+  Menu,
+  X,
+  Home,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  ShieldCheck,
+} from "lucide-react";
 import "./styles.css";
 
 const TOTP_STEP_SECONDS = 30;
@@ -35,7 +49,10 @@ function decodeBase32(secret: string): Uint8Array {
   const leftoverBitCount = bits.length % 8;
   if (
     leftoverBitCount > 0 &&
-    !bits.slice(bits.length - leftoverBitCount).split("").every((bit) => bit === "0")
+    !bits
+      .slice(bits.length - leftoverBitCount)
+      .split("")
+      .every((bit) => bit === "0")
   ) {
     throw new Error("Use a valid Base32 secret padding.");
   }
@@ -66,14 +83,18 @@ function readSecretFromUrlSearch(): string {
   }
   try {
     const params = new URLSearchParams(window.location.search);
-    const raw = params.get("secret") ?? params.get("key") ?? params.get("s") ?? "";
+    const raw =
+      params.get("secret") ?? params.get("key") ?? params.get("s") ?? "";
     return raw.trim();
   } catch {
     return "";
   }
 }
 
-async function generateTotp(secret: string, timestamp: number): Promise<string> {
+async function generateTotp(
+  secret: string,
+  timestamp: number,
+): Promise<string> {
   const keyBytes = decodeBase32(secret);
   if (keyBytes.length === 0) {
     return "";
@@ -88,7 +109,11 @@ async function generateTotp(secret: string, timestamp: number): Promise<string> 
   );
 
   const counter = Math.floor(timestamp / 1000 / TOTP_STEP_SECONDS);
-  const signature = await crypto.subtle.sign("HMAC", cryptoKey, counterToBytes(counter));
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    cryptoKey,
+    counterToBytes(counter),
+  );
   const hmac = new Uint8Array(signature);
   const offset = hmac[hmac.length - 1] & 0x0f;
   const binary =
@@ -106,6 +131,8 @@ function App() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const secretInputRef = useRef<HTMLInputElement>(null);
   const [timeStep, setTimeStep] = useState<number>(() =>
     Math.floor(Date.now() / 1000 / TOTP_STEP_SECONDS),
@@ -116,7 +143,9 @@ function App() {
   useEffect(() => {
     const intervalId = window.setInterval(() => {
       const nextStep = Math.floor(Date.now() / 1000 / TOTP_STEP_SECONDS);
-      setTimeStep((currentStep) => (currentStep === nextStep ? currentStep : nextStep));
+      setTimeStep((currentStep) =>
+        currentStep === nextStep ? currentStep : nextStep,
+      );
     }, 500);
 
     return () => window.clearInterval(intervalId);
@@ -146,7 +175,9 @@ function App() {
       } catch (err) {
         if (!cancelled) {
           setCode("");
-          setError(err instanceof Error ? err.message : "Could not generate token.");
+          setError(
+            err instanceof Error ? err.message : "Could not generate token.",
+          );
         }
       }
     }
@@ -173,7 +204,9 @@ function App() {
     } catch (err) {
       setCode("");
       setCopied(false);
-      setError(err instanceof Error ? err.message : "Could not generate token.");
+      setError(
+        err instanceof Error ? err.message : "Could not generate token.",
+      );
     }
   }
 
@@ -194,28 +227,131 @@ function App() {
   }
 
   return (
-    <main className={darkMode ? "app dark" : "app"}>
-      <section className="shell" aria-labelledby="page-title">
-        <header className="topbar">
-          <div className="brand">
-            <span className="brandIcon" aria-hidden="true">
-              <KeyRound size={24} />
+    <main
+      className={`app ${darkMode ? "dark" : ""} ${sidebarCollapsed ? "sidebarCollapsed" : ""}`}
+    >
+      {/* Sidebar Overlay */}
+      {sidebarOpen && (
+        <div
+          className="sidebarOverlay"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`sidebar ${sidebarOpen ? "open" : ""} ${sidebarCollapsed ? "collapsed" : ""}`}
+      >
+        <div className="sidebarHeader">
+          <div className="sidebarBrand">
+            <span className="sidebarBrandIcon" aria-hidden="true">
+              <Wrench size={20} />
             </span>
-            <div>
-              <h1 id="page-title">TOTP Generator</h1>
-              <p>RFC 6238 · HMAC-SHA1 · 6 digits</p>
-            </div>
+            {!sidebarCollapsed && (
+              <span className="sidebarBrandText">Web Tools</span>
+            )}
           </div>
 
           <button
-            className="iconButton"
+            className="sidebarThemeToggle"
             type="button"
             onClick={() => setDarkMode((value) => !value)}
-            aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+            aria-label={
+              darkMode ? "Switch to light mode" : "Switch to dark mode"
+            }
             title={darkMode ? "Light mode" : "Dark mode"}
           >
-            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
+
+          <button
+            className="sidebarCloseButton"
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close sidebar"
+          >
+            <X size={20} />
+          </button>
+
+          <button
+            className="sidebarCollapseButton"
+            type="button"
+            onClick={() => setSidebarCollapsed((value) => !value)}
+            aria-label={
+              sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+            }
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {sidebarCollapsed ? (
+              <ChevronRight size={18} />
+            ) : (
+              <ChevronLeft size={18} />
+            )}
+          </button>
+        </div>
+
+        <nav className="sidebarNav" aria-label="Main navigation">
+          <a
+            href="#"
+            className="sidebarNavItem active"
+            title={sidebarCollapsed ? "TOTP Generator" : ""}
+          >
+            <ShieldCheck size={20} />
+            {!sidebarCollapsed && <span>TOTP Generator</span>}
+          </a>
+          <a
+            href="#"
+            className="sidebarNavItem"
+            title={sidebarCollapsed ? "Home" : ""}
+          >
+            <Home size={20} />
+            {!sidebarCollapsed && <span>Home</span>}
+          </a>
+          <a
+            href="#"
+            className="sidebarNavItem"
+            title={sidebarCollapsed ? "Settings" : ""}
+          >
+            <Settings size={20} />
+            {!sidebarCollapsed && <span>Settings</span>}
+          </a>
+        </nav>
+
+        <div className="sidebarFooter"></div>
+      </aside>
+
+      {/* Fixed Dark Mode Toggle - Near Header */}
+      <button
+        className="fixedThemeToggle mobileOnly"
+        type="button"
+        onClick={() => setDarkMode((value) => !value)}
+        aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+        title={darkMode ? "Light mode" : "Dark mode"}
+      >
+        {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+      </button>
+
+      <section className="shell" aria-labelledby="page-title">
+        <header className="topbar">
+          <div className="brand">
+            <button
+              className="menuButton"
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open sidebar"
+              aria-expanded={sidebarOpen}
+            >
+              <Menu size={24} />
+            </button>
+            <span className="brandIcon" aria-hidden="true">
+              <ShieldCheck size={24} />
+            </span>
+            <div>
+              <h1 id="page-title">TOTP Generator</h1>
+              <p>RFC 6238 · HMAC-SHA1</p>
+            </div>
+          </div>
         </header>
 
         <div className="panel">
@@ -235,8 +371,8 @@ function App() {
             />
           </label>
           <p id="secret-help" className="helpText">
-            Your secret is processed only in this browser. It is not stored, logged, or sent
-            anywhere. Spaces and lowercase letters are accepted.
+            Your secret is processed only in this browser. It is not stored,
+            logged, or sent anywhere. Spaces and lowercase letters are accepted.
           </p>
           <p
             id="secret-error"
@@ -247,7 +383,11 @@ function App() {
             {error || " "}
           </p>
 
-          <button className="generateButton" type="button" onClick={handleGenerate}>
+          <button
+            className="generateButton"
+            type="button"
+            onClick={handleGenerate}
+          >
             <RefreshCw size={18} />
             Generate TOTP
           </button>
