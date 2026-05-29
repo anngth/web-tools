@@ -5,77 +5,21 @@ import {
   Clipboard,
   Wrench,
   Moon,
-  RefreshCw,
   Sun,
   Menu,
   X,
-  Home,
-  Settings,
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
 } from "lucide-react";
 import "./styles.css";
-
-const TOTP_STEP_SECONDS = 30;
-const DIGITS = 6;
-
-function normalizeSecret(value: string): string {
-  return value.replace(/\s+/g, "").replace(/=+$/g, "").toUpperCase();
-}
-
-function decodeBase32(secret: string): Uint8Array {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const normalized = normalizeSecret(secret);
-  const allowedLengthRemainders = new Set([0, 2, 4, 5, 7]);
-
-  if (!normalized) {
-    return new Uint8Array();
-  }
-
-  if (!allowedLengthRemainders.has(normalized.length % 8)) {
-    throw new Error("Use a valid Base32 secret length.");
-  }
-
-  let bits = "";
-  for (const char of normalized) {
-    const value = alphabet.indexOf(char);
-    if (value === -1) {
-      throw new Error("Use a valid Base32 secret: A-Z and 2-7.");
-    }
-    bits += value.toString(2).padStart(5, "0");
-  }
-
-  const leftoverBitCount = bits.length % 8;
-  if (
-    leftoverBitCount > 0 &&
-    !bits
-      .slice(bits.length - leftoverBitCount)
-      .split("")
-      .every((bit) => bit === "0")
-  ) {
-    throw new Error("Use a valid Base32 secret padding.");
-  }
-
-  const bytes: number[] = [];
-  for (let i = 0; i + 8 <= bits.length; i += 8) {
-    bytes.push(Number.parseInt(bits.slice(i, i + 8), 2));
-  }
-
-  return new Uint8Array(bytes);
-}
-
-function counterToBytes(counter: number): ArrayBuffer {
-  const buffer = new ArrayBuffer(8);
-  const view = new DataView(buffer);
-  const high = Math.floor(counter / 0x100000000);
-  const low = counter >>> 0;
-
-  view.setUint32(0, high, false);
-  view.setUint32(4, low, false);
-
-  return buffer;
-}
+import {
+  generateTotp,
+  importTotpKey,
+  normalizeSecret,
+  parseOtpauthUri,
+  TOTP_STEP_SECONDS,
+} from "./totp";
 
 function readSecretFromUrlSearch(): string {
   if (typeof window === "undefined") {
@@ -85,44 +29,58 @@ function readSecretFromUrlSearch(): string {
     const params = new URLSearchParams(window.location.search);
     const raw =
       params.get("secret") ?? params.get("key") ?? params.get("s") ?? "";
-    return raw.trim();
+
+    if (raw) {
+      return (parseOtpauthUri(raw) || raw).trim();
+    }
+
+    if (!raw && window.location.hash) {
+      const hashValue = safeDecodeUriComponent(window.location.hash.slice(1));
+      const hashSecret = parseOtpauthUri(hashValue);
+      if (hashSecret) return hashSecret.trim();
+    }
+
+    return "";
   } catch {
     return "";
   }
 }
 
-async function generateTotp(
-  secret: string,
-  timestamp: number,
-): Promise<string> {
-  const keyBytes = decodeBase32(secret);
-  if (keyBytes.length === 0) {
-    return "";
+function safeDecodeUriComponent(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function removeSecretFromAddressBar() {
+  if (typeof window === "undefined" || !window.history.replaceState) {
+    return;
   }
 
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw",
-    keyBytes,
-    { name: "HMAC", hash: "SHA-1" },
-    false,
-    ["sign"],
+  const url = new URL(window.location.href);
+  const sensitiveParams = ["secret", "key", "s"];
+  const hasSensitiveParam = sensitiveParams.some((param) =>
+    url.searchParams.has(param),
+  );
+  const hasSensitiveHash = parseOtpauthUri(
+    safeDecodeUriComponent(url.hash.slice(1)),
   );
 
-  const counter = Math.floor(timestamp / 1000 / TOTP_STEP_SECONDS);
-  const signature = await crypto.subtle.sign(
-    "HMAC",
-    cryptoKey,
-    counterToBytes(counter),
-  );
-  const hmac = new Uint8Array(signature);
-  const offset = hmac[hmac.length - 1] & 0x0f;
-  const binary =
-    ((hmac[offset] & 0x7f) << 24) |
-    ((hmac[offset + 1] & 0xff) << 16) |
-    ((hmac[offset + 2] & 0xff) << 8) |
-    (hmac[offset + 3] & 0xff);
+  if (!hasSensitiveParam && !hasSensitiveHash) {
+    return;
+  }
 
-  return String(binary % 10 ** DIGITS).padStart(DIGITS, "0");
+  for (const param of sensitiveParams) {
+    url.searchParams.delete(param);
+  }
+  url.hash = "";
+  window.history.replaceState(
+    null,
+    document.title,
+    `${url.pathname}${url.search}`,
+  );
 }
 
 function App() {
@@ -134,25 +92,41 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const secretInputRef = useRef<HTMLInputElement>(null);
-  const [timeStep, setTimeStep] = useState<number>(() =>
-    Math.floor(Date.now() / 1000 / TOTP_STEP_SECONDS),
-  );
+  const [now, setNow] = useState(() => Date.now());
 
   const normalizedSecret = useMemo(() => normalizeSecret(secret), [secret]);
 
+  const cryptoKeyPromise = useMemo(() => {
+    if (!normalizedSecret) {
+      return Promise.resolve(null);
+    }
+    return importTotpKey(normalizedSecret);
+  }, [normalizedSecret]);
+
+  const secondsRemaining = useMemo(() => {
+    const currentSecond = Math.floor(now / 1000);
+    return TOTP_STEP_SECONDS - (currentSecond % TOTP_STEP_SECONDS);
+  }, [now]);
+  const currentStep = useMemo(
+    () => Math.floor(now / 1000 / TOTP_STEP_SECONDS),
+    [now],
+  );
+
+  const progressPercentage = useMemo(() => {
+    return (secondsRemaining / TOTP_STEP_SECONDS) * 100;
+  }, [secondsRemaining]);
+
   useEffect(() => {
     const intervalId = window.setInterval(() => {
-      const nextStep = Math.floor(Date.now() / 1000 / TOTP_STEP_SECONDS);
-      setTimeStep((currentStep) =>
-        currentStep === nextStep ? currentStep : nextStep,
-      );
-    }, 500);
+      setNow(Date.now());
+    }, 1000);
 
     return () => window.clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
     secretInputRef.current?.focus();
+    removeSecretFromAddressBar();
   }, []);
 
   useEffect(() => {
@@ -167,7 +141,16 @@ function App() {
       }
 
       try {
-        const nextCode = await generateTotp(normalizedSecret, Date.now());
+        const cryptoKey = await cryptoKeyPromise;
+        if (!cryptoKey) {
+          return;
+        }
+        const stepTimestamp = currentStep * TOTP_STEP_SECONDS * 1000;
+        const nextCode = await generateTotp(
+          normalizedSecret,
+          stepTimestamp,
+          cryptoKey,
+        );
         if (!cancelled) {
           setCode(nextCode);
           setError("");
@@ -186,29 +169,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [normalizedSecret, timeStep]);
-
-  async function handleGenerate() {
-    if (!normalizedSecret) {
-      setCode("");
-      setCopied(false);
-      setError("Enter a Base32 secret key first.");
-      return;
-    }
-
-    try {
-      const nextCode = await generateTotp(normalizedSecret, Date.now());
-      setCode(nextCode);
-      setCopied(false);
-      setError("");
-    } catch (err) {
-      setCode("");
-      setCopied(false);
-      setError(
-        err instanceof Error ? err.message : "Could not generate token.",
-      );
-    }
-  }
+  }, [cryptoKeyPromise, currentStep, normalizedSecret]);
 
   async function copyCode() {
     if (!code) {
@@ -220,9 +181,29 @@ function App() {
       setCopied(true);
       setError("");
       window.setTimeout(() => setCopied(false), 1600);
-    } catch {
-      setCopied(false);
-      setError("Could not copy token. Check browser clipboard permission.");
+    } catch (err) {
+      // Fallback for older browsers or when clipboard API is not available
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = code;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.select();
+        const successful = document.execCommand("copy");
+        document.body.removeChild(textArea);
+
+        if (successful) {
+          setCopied(true);
+          setError("");
+          window.setTimeout(() => setCopied(false), 1600);
+        } else {
+          throw new Error("Fallback copy failed");
+        }
+      } catch {
+        setCopied(false);
+        setError("Could not copy token. Check browser clipboard permission.");
+      }
     }
   }
 
@@ -300,22 +281,6 @@ function App() {
             <ShieldCheck size={20} />
             {!sidebarCollapsed && <span>TOTP Generator</span>}
           </a>
-          <a
-            href="#"
-            className="sidebarNavItem"
-            title={sidebarCollapsed ? "Home" : ""}
-          >
-            <Home size={20} />
-            {!sidebarCollapsed && <span>Home</span>}
-          </a>
-          <a
-            href="#"
-            className="sidebarNavItem"
-            title={sidebarCollapsed ? "Settings" : ""}
-          >
-            <Settings size={20} />
-            {!sidebarCollapsed && <span>Settings</span>}
-          </a>
         </nav>
 
         <div className="sidebarFooter"></div>
@@ -383,15 +348,6 @@ function App() {
             {error || " "}
           </p>
 
-          <button
-            className="generateButton"
-            type="button"
-            onClick={handleGenerate}
-          >
-            <RefreshCw size={18} />
-            Generate TOTP
-          </button>
-
           <div className="output" aria-live="polite">
             <span className="outputLabel">Current Token</span>
             <div className="codeRow">
@@ -414,6 +370,19 @@ function App() {
                 {copied ? <Check size={18} /> : <Clipboard size={18} />}
                 {copied ? "Copied" : "Copy"}
               </button>
+            </div>
+
+            {/* Countdown Timer */}
+            <div className={code ? "countdown" : "countdown hidden"}>
+              <div className="countdownBar">
+                <div
+                  className="countdownProgress"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+              <span className="countdownText" aria-live="polite">
+                {code ? `Refreshes in ${secondsRemaining}s` : "\u00A0"}
+              </span>
             </div>
           </div>
         </div>

@@ -11,6 +11,23 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+
+  /* Spacing */
+  --spacing-xs: 8px;
+  --spacing-sm: 12px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+
+  /* Sizes */
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 72px;
+  --button-height: 44px;
+  --input-height: 52px;
+  --icon-button-size: 48px;
+
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-full: 50%;
 }
 
 * {
@@ -40,7 +57,6 @@ input {
   --success-strong: #166534;
   --danger: #b42318;
   --shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
-  --sidebar-width: 0px;
 
   align-items: center;
   background:
@@ -49,7 +65,7 @@ input {
   color: var(--text);
   display: flex;
   min-height: 100dvh;
-  padding: 24px;
+  padding: var(--spacing-lg);
   transition: padding-left 280ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -67,14 +83,13 @@ input {
   --success-strong: #86efac;
   --danger: #fca5a5;
   --shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
-  --sidebar-width: 0px;
 }
 
 .shell {
   margin: 0 auto;
   max-width: 560px;
   width: 100%;
-  padding: 0 24px;
+  padding: 0 var(--spacing-lg);
 }
 
 /* Sidebar Styles */
@@ -86,19 +101,19 @@ input {
   flex-direction: column;
   height: 100dvh;
   left: 0;
-  overflow: visible;
+  overflow: hidden;
   position: fixed;
   top: 0;
   transform: translateX(-100%);
   transition:
     transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
     width 280ms cubic-bezier(0.4, 0, 0.2, 1);
-  width: 280px;
+  width: var(--sidebar-width);
   z-index: 1000;
 }
 
 .sidebar.collapsed {
-  width: 72px;
+  width: var(--sidebar-collapsed-width);
 }
 
 .sidebar.open {
@@ -130,21 +145,22 @@ input {
   border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
-  padding: 16px;
+  padding: var(--spacing-md);
   position: relative;
+  min-height: 69px;
 }
 
 .sidebarBrand {
   align-items: center;
   display: flex;
-  gap: 12px;
+  gap: var(--spacing-sm);
   flex: 1;
 }
 
 .sidebarBrandIcon {
   align-items: center;
   background: var(--primary-soft);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--primary);
   display: inline-flex;
   height: 36px;
@@ -165,7 +181,7 @@ input {
   align-items: center;
   background: var(--surface-strong);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--muted);
   cursor: pointer;
   display: inline-flex;
@@ -197,7 +213,7 @@ input {
   align-items: center;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--muted);
   cursor: pointer;
   display: inline-flex;
@@ -222,17 +238,17 @@ input {
   flex-direction: column;
   gap: 4px;
   overflow-y: auto;
-  padding: 16px;
+  padding: var(--spacing-md);
 }
 
 .sidebarNavItem {
   align-items: center;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--muted);
   cursor: pointer;
   display: flex;
-  gap: 12px;
-  min-height: 44px;
+  gap: var(--spacing-sm);
+  min-height: var(--button-height);
   padding: 0 14px;
   text-decoration: none;
   transition:
@@ -274,12 +290,12 @@ input {
   background: var(--surface);
   border: 1px solid var(--border);
   border-left: none;
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
   color: var(--muted);
   cursor: pointer;
   display: none;
-  height: 48px;
+  height: var(--icon-button-size);
   justify-content: center;
   position: absolute;
   right: -20px;
@@ -316,21 +332,21 @@ input {
   align-items: center;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   box-shadow: var(--shadow);
   color: var(--text);
   cursor: pointer;
   display: inline-flex;
-  height: 48px;
+  height: var(--icon-button-size);
   justify-content: center;
   position: fixed;
-  right: 24px;
-  top: 24px;
+  right: var(--spacing-lg);
+  top: var(--spacing-lg);
   transition:
     background-color 180ms ease,
     border-color 180ms ease,
     transform 180ms ease;
-  width: 48px;
+  width: var(--icon-button-size);
   z-index: 900;
 }
 
@@ -352,16 +368,16 @@ input {
   align-items: center;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--text);
   cursor: pointer;
   display: inline-flex;
-  height: 44px;
+  height: var(--button-height);
   justify-content: center;
   transition:
     background-color 180ms ease,
     border-color 180ms ease;
-  width: 44px;
+  width: var(--button-height);
 }
 
 .menuButton:hover {
@@ -380,6 +396,7 @@ input {
   }
 
   .sidebar {
+    overflow: visible;
     transform: translateX(0);
   }
 
@@ -400,18 +417,18 @@ input {
   }
 
   .app {
-    padding-left: 280px;
+    padding-left: calc(var(--sidebar-width) + var(--spacing-lg));
     transition: padding-left 280ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .app.sidebarCollapsed {
-    padding-left: 72px;
+    padding-left: calc(var(--sidebar-collapsed-width) + var(--spacing-lg));
   }
 
   .shell {
     margin: 0 auto;
-    padding-left: 24px;
-    padding-right: 24px;
+    padding-left: var(--spacing-lg);
+    padding-right: var(--spacing-lg);
   }
 }
 
@@ -419,7 +436,7 @@ input {
   align-items: center;
   display: flex;
   justify-content: flex-start;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .brand {
@@ -431,11 +448,11 @@ input {
 .brandIcon,
 .iconButton {
   align-items: center;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   display: inline-flex;
-  height: 44px;
+  height: var(--button-height);
   justify-content: center;
-  width: 44px;
+  width: var(--button-height);
 }
 
 .brandIcon {
@@ -482,14 +499,15 @@ h1 {
 .panel {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   box-shadow: var(--shadow);
-  padding: 24px;
+  padding: 20px;
 }
 
 .field {
   display: grid;
-  gap: 8px;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 
 .field span,
@@ -497,15 +515,16 @@ h1 {
   color: var(--muted);
   font-size: 0.92rem;
   font-weight: 600;
+  margin-bottom: 4px;
 }
 
 input {
   background: var(--surface-strong);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--text);
   font-size: 0.92rem;
-  min-height: 52px;
+  min-height: var(--input-height);
   outline: none;
   overflow: hidden;
   padding: 0 14px;
@@ -529,9 +548,9 @@ input:focus {
 
 .helpText,
 .errorText {
-  font-size: 0.92rem;
-  line-height: 1.5;
-  margin-top: 9px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  margin: 6px 0 0 0;
 }
 
 .helpText {
@@ -551,15 +570,15 @@ input:focus {
   align-items: center;
   background: var(--surface-strong);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--text);
   cursor: pointer;
   display: inline-flex;
-  gap: 8px;
+  gap: var(--spacing-xs);
   justify-content: center;
   margin-top: 18px;
-  min-height: 48px;
-  padding: 0 16px;
+  min-height: var(--icon-button-size);
+  padding: 0 var(--spacing-md);
   transition:
     background-color 180ms ease,
     border-color 180ms ease,
@@ -579,10 +598,10 @@ input:focus {
 .output {
   align-items: center;
   display: grid;
-  gap: 14px;
+  gap: 12px;
   justify-items: center;
-  margin: 28px 0;
-  padding: 24px 16px;
+  margin: 24px 0 0 0;
+  padding: 0;
   text-align: center;
 }
 
@@ -590,7 +609,7 @@ input:focus {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--spacing-sm);
   justify-content: center;
   width: 100%;
 }
@@ -598,18 +617,18 @@ input:focus {
 .codeButton {
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: var(--text);
   cursor: pointer;
   font-family:
     "SFMono-Regular", Consolas, "Liberation Mono", Menlo, ui-monospace,
     monospace;
-  font-size: clamp(3rem, 12vw, 5.2rem);
+  font-size: clamp(2.5rem, 10vw, 4rem);
   font-variant-numeric: tabular-nums;
   font-weight: 800;
   line-height: 1;
   min-height: 1em;
-  padding: 4px 8px;
+  padding: 4px var(--spacing-xs);
   transition:
     background-color 180ms ease,
     border-color 180ms ease,
@@ -634,15 +653,15 @@ input:focus {
   align-items: center;
   background: var(--primary);
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   color: #ffffff;
   cursor: pointer;
   display: inline-flex;
-  gap: 8px;
+  gap: var(--spacing-xs);
   justify-content: center;
   min-height: 46px;
   min-width: 100px;
-  padding: 0 16px;
+  padding: 0 var(--spacing-md);
   transition:
     background-color 180ms ease,
     opacity 180ms ease,
@@ -674,6 +693,47 @@ input:focus {
   color: #102014;
 }
 
+/* Countdown Timer */
+.countdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  width: 100%;
+  max-width: 280px;
+  opacity: 1;
+  transition: opacity 200ms ease;
+}
+
+.countdown.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.countdownBar {
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  height: 6px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.countdownProgress {
+  background: linear-gradient(90deg, var(--primary), var(--primary-strong));
+  border-radius: 999px;
+  height: 100%;
+  transition: width 1000ms linear;
+}
+
+.countdownText {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
 :focus-visible {
   outline: 3px solid var(--primary);
   outline-offset: 3px;
@@ -686,7 +746,7 @@ input:focus {
   }
 
   .topbar {
-    gap: 12px;
+    gap: var(--spacing-sm);
   }
 
   .panel {
