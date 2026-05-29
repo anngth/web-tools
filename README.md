@@ -46,6 +46,18 @@ npm run preview
 
 Deploy the generated `dist/` directory to any static hosting provider.
 
+## SEO
+
+The project includes:
+
+- ✅ Meta tags (title, description, keywords)
+- ✅ Open Graph tags (Facebook, LinkedIn)
+- ✅ Twitter Card tags
+- ✅ Structured Data (JSON-LD)
+- ✅ Sitemap.xml
+- ✅ Robots.txt
+- ✅ PWA Manifest
+
 ## Security
 
 All cryptographic operations are performed client-side using the Web Crypto API. Your secret keys are never transmitted over the network, stored in cookies, or logged anywhere. The application works entirely offline after the initial page load.

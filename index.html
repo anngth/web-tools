@@ -3,15 +3,43 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>TOTP Generator - Free 2FA Code Generator | Web Tools</title>
     <meta
       name="description"
-      content="Collection of client-side web utilities including TOTP generator, and more."
+      content="Generate TOTP two-factor authentication codes in your browser. Compatible with Google Authenticator and Microsoft Authenticator, with no secret storage or server calls."
     />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://tools.heimerng.dev/" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "TOTP Generator",
+        "description": "Browser-based TOTP two-factor authentication code generator",
+        "url": "https://tools.heimerng.dev/",
+        "applicationCategory": "SecurityApplication",
+        "operatingSystem": "Any",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": [
+          "Generate TOTP codes per RFC 6238 standard",
+          "Compatible with Google Authenticator and Microsoft Authenticator",
+          "Fully client-side processing with no secret storage",
+          "Auto-refresh every 30 seconds"
+        ]
+      }
+    </script>
+
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; upgrade-insecure-requests"
+      content="default-src 'self'; script-src 'self' 'sha256-dfUNuhfuQKX9JnOHnb2P9qFyXSkBf1akTsiY4xJ++uQ='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; upgrade-insecure-requests"
     />
-    <title>Web Tools</title>
   </head>
   <body>
     <div id="root"></div>

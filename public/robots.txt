@@ -1,0 +1,9 @@
+# robots.txt for Web Tools - TOTP Generator
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://tools.heimerng.dev/sitemap.xml
+
+# Crawl-delay (optional, adjust as needed)
+Crawl-delay: 1
