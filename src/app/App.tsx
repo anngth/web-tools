@@ -3,7 +3,7 @@ import { AppShell } from "./layout/AppShell";
 import { type ToolId, tools } from "./toolRegistry";
 
 export function App() {
-  const [activeToolId, setActiveToolId] = useState<ToolId>("totp");
+  const [activeToolId, setActiveToolId] = useState<ToolId>(tools[0].id);
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

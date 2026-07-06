@@ -61,7 +61,7 @@
 }
 
 .sidebarOverlay {
-  animation: fadeIn 280ms ease;
+  animation: fade-in 280ms ease;
   background: rgba(0, 0, 0, 0.5);
   height: 100dvh;
   left: 0;
@@ -71,7 +71,7 @@
   z-index: 999;
 }
 
-@keyframes fadeIn {
+@keyframes fade-in {
   from {
     opacity: 0;
   }
