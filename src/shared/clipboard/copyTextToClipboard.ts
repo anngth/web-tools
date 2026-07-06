@@ -12,17 +12,19 @@ export async function copyTextToClipboard(text: string): Promise<boolean> {
     // Fall through to the textarea fallback below.
   }
 
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  textArea.style.position = "fixed";
+  textArea.style.left = "-999999px";
+
   try {
-    const textArea = document.createElement("textarea");
-    textArea.value = text;
-    textArea.style.position = "fixed";
-    textArea.style.left = "-999999px";
     document.body.appendChild(textArea);
+    textArea.focus();
     textArea.select();
-    const successful = document.execCommand("copy");
-    document.body.removeChild(textArea);
-    return successful;
+    return document.execCommand("copy");
   } catch {
     return false;
+  } finally {
+    textArea.remove();
   }
 }

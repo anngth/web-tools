@@ -5,6 +5,7 @@ import {
   normalizeSecret,
   parseOtpauthUri,
 } from "./totp.service";
+import { removeSecretFromAddressBar } from "./totp-url";
 
 describe("normalizeSecret", () => {
   it("removes spaces", () => {
@@ -107,5 +108,35 @@ describe("generateTotp", () => {
   it("matches the RFC 6238 SHA-1 test vector for 59 seconds", async () => {
     const secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
     await expect(generateTotp(secret, 59_000)).resolves.toBe("287082");
+  });
+});
+
+describe("removeSecretFromAddressBar", () => {
+  it("removes sensitive search params and preserves non-sensitive hashes", () => {
+    window.history.replaceState(
+      null,
+      document.title,
+      "/?secret=JBSWY3DPEHPK3PXP&theme=dark#settings",
+    );
+
+    removeSecretFromAddressBar();
+
+    expect(window.location.pathname).toBe("/");
+    expect(window.location.search).toBe("?theme=dark");
+    expect(window.location.hash).toBe("#settings");
+  });
+
+  it("removes otpauth hash payloads", () => {
+    window.history.replaceState(
+      null,
+      document.title,
+      "/#otpauth%3A%2F%2Ftotp%2FExample%3Fsecret%3DJBSWY3DPEHPK3PXP",
+    );
+
+    removeSecretFromAddressBar();
+
+    expect(window.location.pathname).toBe("/");
+    expect(window.location.search).toBe("");
+    expect(window.location.hash).toBe("");
   });
 });

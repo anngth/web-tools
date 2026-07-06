@@ -22,6 +22,7 @@ export function PageHeader({
           type="button"
           onClick={onOpenSidebar}
           aria-label="Open sidebar"
+          aria-controls="sidebar"
           aria-expanded={isSidebarOpen}
         >
           <Menu size={24} />
