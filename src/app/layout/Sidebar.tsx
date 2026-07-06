@@ -38,6 +38,7 @@ export function Sidebar({
       )}
 
       <aside
+        id="sidebar"
         className={`sidebar ${isOpen ? "open" : ""} ${isCollapsed ? "collapsed" : ""}`}
       >
         <div className="sidebarHeader">

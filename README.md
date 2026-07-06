@@ -33,6 +33,7 @@ src/
     toolRegistry.ts
   features/
     totp/
+      index.ts
       TotpPage.tsx
       totp.service.ts
       totp-url.ts

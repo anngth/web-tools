@@ -25,6 +25,20 @@
 
   --radius-sm: 8px;
   --radius-full: 50%;
+
+  --bg: #f7f8fb;
+  --surface: #ffffff;
+  --surface-strong: #f0f4f8;
+  --text: #172033;
+  --muted: #64748b;
+  --border: #d8e0ea;
+  --primary: #0f766e;
+  --primary-strong: #0b5f59;
+  --primary-soft: #d9fbf4;
+  --success: #15803d;
+  --success-strong: #166534;
+  --danger: #b42318;
+  --shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
 }
 
 * {

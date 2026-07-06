@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ChangeEvent } from "react";
 import { Check, Clipboard } from "lucide-react";
 import { copyTextToClipboard } from "../../shared/clipboard";
 import {
@@ -19,6 +20,7 @@ export function TotpPage() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const secretInputRef = useRef<HTMLInputElement>(null);
+  const copiedResetTimeoutRef = useRef<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
   const normalizedSecret = useMemo(() => normalizeSecret(secret), [secret]);
@@ -55,6 +57,14 @@ export function TotpPage() {
   useEffect(() => {
     secretInputRef.current?.focus();
     removeSecretFromAddressBar();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (copiedResetTimeoutRef.current !== null) {
+        window.clearTimeout(copiedResetTimeoutRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -108,12 +118,25 @@ export function TotpPage() {
     if (successful) {
       setCopied(true);
       setError("");
-      window.setTimeout(() => setCopied(false), 1600);
+      if (copiedResetTimeoutRef.current !== null) {
+        window.clearTimeout(copiedResetTimeoutRef.current);
+      }
+      copiedResetTimeoutRef.current = window.setTimeout(() => {
+        setCopied(false);
+        copiedResetTimeoutRef.current = null;
+      }, 1600);
       return;
     }
 
     setCopied(false);
     setError("Could not copy token. Check browser clipboard permission.");
+  }
+
+  function handleSecretChange(event: ChangeEvent<HTMLInputElement>) {
+    setSecret(event.target.value);
+    setCode("");
+    setError("");
+    setCopied(false);
   }
 
   return (
@@ -128,7 +151,7 @@ export function TotpPage() {
           spellCheck="false"
           type="text"
           value={secret}
-          onChange={(event) => setSecret(event.target.value)}
+          onChange={handleSecretChange}
           placeholder="JBSWY3DPEHPK3PXP, 6rb5 m3a2 rcf6 np6i qbyg r6pf sf4r ghkd"
           aria-describedby="secret-help secret-error"
         />
@@ -146,7 +169,7 @@ export function TotpPage() {
         {error || " "}
       </p>
 
-      <div className="output" aria-live="polite">
+      <div className="output">
         <span className="outputLabel">Current Token</span>
         <div className="codeRow">
           <button
@@ -156,6 +179,7 @@ export function TotpPage() {
             disabled={!code}
             aria-label={code ? "Copy current token" : "No token to copy"}
             title={code ? "Copy token" : "Enter a secret key first"}
+            aria-live="polite"
           >
             {code || "------"}
           </button>
@@ -177,7 +201,7 @@ export function TotpPage() {
               style={{ width: `${progressPercentage}%` }}
             />
           </div>
-          <span className="countdownText" aria-live="polite">
+          <span className="countdownText">
             {code ? `Refreshes in ${secondsRemaining}s` : "\u00A0"}
           </span>
         </div>

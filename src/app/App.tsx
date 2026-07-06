@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { AppShell } from "./layout/AppShell";
 import { type ToolId, tools } from "./toolRegistry";
 
@@ -8,9 +8,7 @@ export function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  const activeTool = useMemo(() => {
-    return tools.find((tool) => tool.id === activeToolId) ?? tools[0];
-  }, [activeToolId]);
+  const activeTool = tools.find((tool) => tool.id === activeToolId) ?? tools[0];
   const ActivePage = activeTool.Page;
 
   function selectTool(toolId: ToolId) {

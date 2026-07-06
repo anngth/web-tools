@@ -48,11 +48,15 @@ export function removeSecretFromAddressBar() {
   for (const param of SENSITIVE_SECRET_PARAMS) {
     url.searchParams.delete(param);
   }
-  url.hash = "";
+
+  if (hasSensitiveHash) {
+    url.hash = "";
+  }
+
   window.history.replaceState(
     null,
     document.title,
-    `${url.pathname}${url.search}`,
+    `${url.pathname}${url.search}${url.hash}`,
   );
 }
 
