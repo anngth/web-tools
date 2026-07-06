@@ -4,7 +4,7 @@ import {
   generateTotp,
   normalizeSecret,
   parseOtpauthUri,
-} from "./totp";
+} from "./totp.service";
 
 describe("normalizeSecret", () => {
   it("removes spaces", () => {

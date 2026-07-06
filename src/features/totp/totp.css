@@ -1,0 +1,144 @@
+.outputLabel {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.output {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  margin: 24px 0 0 0;
+  padding: 0;
+  text-align: center;
+}
+
+.codeRow {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  justify-content: center;
+  width: 100%;
+}
+
+.codeButton {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+  font-family:
+    "SFMono-Regular", Consolas, "Liberation Mono", Menlo, ui-monospace,
+    monospace;
+  font-size: clamp(2.5rem, 10vw, 4rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+  min-height: 1em;
+  padding: 4px var(--spacing-xs);
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.codeButton:hover:not(:disabled) {
+  background: var(--surface-strong);
+  border-color: var(--border);
+}
+
+.codeButton:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.codeButton.empty {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.copyButton {
+  align-items: center;
+  background: var(--primary);
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  gap: var(--spacing-xs);
+  justify-content: center;
+  min-height: 46px;
+  min-width: 100px;
+  padding: 0 var(--spacing-md);
+  transition:
+    background-color 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.copyButton:hover:not(:disabled) {
+  background: var(--primary-strong);
+}
+
+.copyButton:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.copyButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.copyButton.copied,
+.copyButton.copied:hover:not(:disabled) {
+  background: var(--success);
+  color: #ffffff;
+}
+
+.app.dark .copyButton.copied,
+.app.dark .copyButton.copied:hover:not(:disabled) {
+  background: var(--success-strong);
+  color: #102014;
+}
+
+.countdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  max-width: 280px;
+  opacity: 1;
+  transition: opacity 200ms ease;
+  width: 100%;
+}
+
+.countdown.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.countdownBar {
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  height: 6px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.countdownProgress {
+  background: linear-gradient(90deg, var(--primary), var(--primary-strong));
+  border-radius: 999px;
+  height: 100%;
+  transition: width 1000ms linear;
+}
+
+.countdownText {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}

@@ -21,7 +21,7 @@ export function parseOtpauthUri(uri: string): string {
   }
 }
 
-export function decodeBase32(secret: string): Uint8Array {
+export function decodeBase32(secret: string): Uint8Array<ArrayBuffer> {
   const normalized = normalizeSecret(secret);
 
   if (!normalized) {

@@ -18,6 +18,36 @@ A collection of client-side web utilities built with React, starting with a TOTP
 - Responsive sidebar with collapse/expand functionality
 - No backend, no API calls, no secret storage
 
+## Project Structure
+
+Feature code lives under `src/features/<tool-name>`. Shared app shell and navigation live under `src/app`, global styling lives under `src/styles`, and cross-tool utilities live under `src/shared`.
+
+```txt
+src/
+  app/
+    layout/
+      AppShell.tsx
+      PageHeader.tsx
+      Sidebar.tsx
+    App.tsx
+    toolRegistry.ts
+  features/
+    totp/
+      TotpPage.tsx
+      totp.service.ts
+      totp-url.ts
+      totp.css
+      totp.test.ts
+  shared/
+    clipboard/
+      copyTextToClipboard.ts
+      index.ts
+  styles/
+    index.css
+    layout.css
+    theme.css
+```
+
 #### URL Parameters
 
 You can pre-fill the secret key using URL parameters:
