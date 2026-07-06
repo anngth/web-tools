@@ -31,7 +31,7 @@
   color: var(--text);
   cursor: pointer;
   font-family:
-    "SFMono-Regular", Consolas, "Liberation Mono", Menlo, ui-monospace,
+    SFMono-Regular, Consolas, "Liberation Mono", Menlo, ui-monospace,
     monospace;
   font-size: clamp(2.5rem, 10vw, 4rem);
   font-variant-numeric: tabular-nums;
