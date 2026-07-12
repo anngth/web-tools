@@ -1,7 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
-import { createJsonLogger } from "./logger";
+import { createJsonLogger, type LogEvent } from "./logger";
 
 const NOW = new Date("2026-07-12T03:04:05.006Z");
+const OPERATIONAL_EVENTS = [
+  "server_start",
+  "server_ready",
+  "cleanup_completed",
+  "cleanup_skipped",
+  "cleanup_failed",
+  "request_failed",
+  "shutdown_started",
+  "shutdown_completed",
+] as const;
+type ExpectedLogEvent = typeof OPERATIONAL_EVENTS[number];
+type IsExact<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const LOG_EVENT_TYPE_IS_EXACT: IsExact<LogEvent, ExpectedLogEvent> = true;
 
 function makeLogger() {
   const stdout = { log: vi.fn() };
@@ -41,17 +54,9 @@ describe("createJsonLogger", () => {
 
   it("supports the exact operational events and allowlisted scalar fields", () => {
     const { logger, stdout, stderr } = makeLogger();
-    const events = [
-      "server_start",
-      "server_ready",
-      "cleanup_completed",
-      "cleanup_skipped",
-      "cleanup_failed",
-      "request_failed",
-      "shutdown_started",
-      "shutdown_completed",
-    ];
+    const events: readonly LogEvent[] = OPERATIONAL_EVENTS;
 
+    expect(LOG_EVENT_TYPE_IS_EXACT).toBe(true);
     logger.info(events[0], {
       requestId: "req-1",
       backendType: "d1",
@@ -106,6 +111,29 @@ describe("createJsonLogger", () => {
       level: "info",
       event: "server_ready",
     });
+  });
+
+  it("throws a generic TypeError without output for unsupported events passed through an unsafe cast", () => {
+    const { logger, stdout, stderr } = makeLogger();
+    const unsafeLogger = logger as unknown as {
+      info(event: string, fields?: Record<string, string>): void;
+      error(event: string, fields?: Record<string, string>): void;
+    };
+    const sensitiveEvent = "destination_https://secret.example/token_secret-token";
+
+    let thrown: unknown;
+    try {
+      unsafeLogger.error(sensitiveEvent, { requestId: "req-1" });
+    } catch (error: unknown) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(TypeError);
+    expect(String(thrown)).toBe("TypeError: Unsupported log event");
+    expect(String(thrown)).not.toContain(sensitiveEvent);
+    expect(stdout.log).not.toHaveBeenCalled();
+    expect(stderr.error).not.toHaveBeenCalled();
+    expect(JSON.stringify([stdout.log.mock.calls, stderr.error.mock.calls])).not.toContain("secret");
   });
 
   it("redacts prohibited sensitive fields from both output streams", () => {

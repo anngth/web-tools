@@ -1,9 +1,29 @@
 export type LogValue = string | number | boolean;
+export type LogEvent =
+  | "server_start"
+  | "server_ready"
+  | "cleanup_completed"
+  | "cleanup_skipped"
+  | "cleanup_failed"
+  | "request_failed"
+  | "shutdown_started"
+  | "shutdown_completed";
 
 export interface AppLogger {
-  info(event: string, fields?: Record<string, LogValue>): void;
-  error(event: string, fields?: Record<string, LogValue>): void;
+  info(event: LogEvent, fields?: Record<string, LogValue>): void;
+  error(event: LogEvent, fields?: Record<string, LogValue>): void;
 }
+
+const LOG_EVENTS: ReadonlySet<string> = new Set<LogEvent>([
+  "server_start",
+  "server_ready",
+  "cleanup_completed",
+  "cleanup_skipped",
+  "cleanup_failed",
+  "request_failed",
+  "shutdown_started",
+  "shutdown_completed",
+]);
 
 const ALLOWED_FIELDS = [
   "requestId",
@@ -18,6 +38,10 @@ const ALLOWED_FIELDS = [
 
 function isLogValue(value: unknown): value is LogValue {
   return typeof value === "string" || typeof value === "number" || typeof value === "boolean";
+}
+
+function assertLogEvent(event: string): asserts event is LogEvent {
+  if (!LOG_EVENTS.has(event)) throw new TypeError("Unsupported log event");
 }
 
 function selectFields(fields: Record<string, LogValue> | undefined): Record<string, LogValue> {
@@ -47,6 +71,7 @@ export function createJsonLogger(
     event: string,
     fields?: Record<string, LogValue>,
   ): void {
+    assertLogEvent(event);
     const line = JSON.stringify({
       timestamp: now().toISOString(),
       level,
