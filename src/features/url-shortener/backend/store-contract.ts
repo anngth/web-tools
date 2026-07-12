@@ -36,9 +36,13 @@ export function describeShortLinkStoreContract(
 
     it("reports a unique slug collision", async () => {
       const store = await createStore();
+      const sameSlugWithDifferentId = {
+        ...record("docs"),
+        id: "different-record-id",
+      };
 
       await expect(store.insert(record("docs"))).resolves.toBe(true);
-      await expect(store.insert(record("docs"))).resolves.toBe(false);
+      await expect(store.insert(sameSlugWithDifferentId)).resolves.toBe(false);
 
       await store.close?.();
     });

@@ -85,6 +85,22 @@ describe("generateSlug", () => {
     expect(slug).toHaveLength(7);
     expect(slug).toMatch(/^[2-9a-hjkmnp-z]{7}$/);
   });
+
+  it("skips bytes outside the unbiased range and requests replacements", () => {
+    const requestedLengths: number[] = [];
+    const byteChunks = [
+      Uint8Array.from([248, 249, 0, 1, 2, 3, 4]),
+      Uint8Array.from([5, 6]),
+    ];
+
+    const slug = generateSlug((length) => {
+      requestedLengths.push(length);
+      return byteChunks.shift() ?? new Uint8Array(length);
+    });
+
+    expect(slug).toBe("2345678");
+    expect(requestedLengths).toEqual([7, 2]);
+  });
 });
 
 describe("LocalShortLinkBackend", () => {
