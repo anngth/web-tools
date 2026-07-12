@@ -92,6 +92,30 @@ describe("D1GatewayClient", () => {
     expect(JSON.stringify(payload)).not.toContain("2099");
   });
 
+  it.each([
+    ["resolve", ".", "%2E"],
+    ["resolve", "..", "%2E%2E"],
+    ["stats", ".", "%2E"],
+    ["stats", "..", "%2E%2E"],
+  ] as const)("encodes the %s slug %j as the route segment %s", async (operation, slug, encodedSlug) => {
+    const response = operation === "resolve"
+      ? jsonResponse({ status: 404 })
+      : jsonResponse(LINK);
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(response);
+    const client = makeClient(fetchMock);
+
+    if (operation === "resolve") {
+      await client.resolve(slug, NOW);
+    } else {
+      await client.stats(slug, NOW);
+    }
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toBe(
+      `https://gateway.example.test/root/internal/links/${encodedSlug}/${operation}?now=${encodeURIComponent(NOW.toISOString())}`,
+    );
+  });
+
   it("maps HTTP and payload missing records to the backend missing values", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()

@@ -34,6 +34,12 @@ function isCanonicalIso(value: unknown): value is string {
   return Number.isFinite(parsed.getTime()) && parsed.toISOString() === value;
 }
 
+function encodePathSegment(value: string): string {
+  if (value === ".") return "%2E";
+  if (value === "..") return "%2E%2E";
+  return encodeURIComponent(value);
+}
+
 function parseLink(value: unknown): ShortLinkPublic {
   const record = asRecord(value);
   const keys = [
@@ -146,6 +152,8 @@ function safeBaseUrl(value: string): URL {
     ) {
       throw gatewayError();
     }
+    url.search = "";
+    url.hash = "";
     if (!url.pathname.endsWith("/")) url.pathname += "/";
     return url;
   } catch {
@@ -190,14 +198,14 @@ export class D1GatewayClient implements ShortLinkBackend {
     slug: string,
     now = new Date(),
   ): Promise<{ status: 302; destinationUrl: string } | { status: 404 }> {
-    const response = await this.requestWithNow(`internal/links/${encodeURIComponent(slug)}/resolve`, now);
+    const response = await this.requestWithNow(`internal/links/${encodePathSegment(slug)}/resolve`, now);
     if (response.status === 404) return { status: 404 };
     if (response.status !== 200) throw gatewayError();
     return parseResolve(await readLimitedJson(response));
   }
 
   async stats(slug: string, now = new Date()): Promise<ShortLinkStats | null> {
-    const response = await this.requestWithNow(`internal/links/${encodeURIComponent(slug)}/stats`, now);
+    const response = await this.requestWithNow(`internal/links/${encodePathSegment(slug)}/stats`, now);
     if (response.status === 404) return null;
     if (response.status !== 200) throw gatewayError();
     return parseLink(await readLimitedJson(response));
@@ -213,15 +221,12 @@ export class D1GatewayClient implements ShortLinkBackend {
   }
 
   private requestWithNow(path: string, now: Date): Promise<Response> {
-    const url = new URL(path, this.baseUrl);
-    url.searchParams.set("now", now.toISOString());
-    return this.request(url, { method: "GET" });
+    return this.request(`${path}?now=${encodeURIComponent(now.toISOString())}`, { method: "GET" });
   }
 
-  private async request(path: string | URL, init: RequestInit): Promise<Response> {
-    const url = path instanceof URL ? path : new URL(path, this.baseUrl);
+  private async request(path: string, init: RequestInit): Promise<Response> {
     try {
-      const response = await this.fetchImpl(url.toString(), {
+      const response = await this.fetchImpl(`${this.baseUrl.toString()}${path}`, {
         ...init,
         headers: {
           authorization: `Bearer ${this.token}`,
