@@ -93,27 +93,21 @@ describe("D1GatewayClient", () => {
   });
 
   it.each([
-    ["resolve", ".", "%2E"],
-    ["resolve", "..", "%2E%2E"],
-    ["stats", ".", "%2E"],
-    ["stats", "..", "%2E%2E"],
-  ] as const)("encodes the %s slug %j as the route segment %s", async (operation, slug, encodedSlug) => {
-    const response = operation === "resolve"
-      ? jsonResponse({ status: 404 })
-      : jsonResponse(LINK);
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(response);
+    ["resolve", "."],
+    ["resolve", ".."],
+    ["stats", "."],
+    ["stats", ".."],
+  ] as const)("treats the dot-only %s slug %j as missing without a gateway request", async (operation, slug) => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ error: "not_found" }, 404));
     const client = makeClient(fetchMock);
 
     if (operation === "resolve") {
-      await client.resolve(slug, NOW);
+      await expect(client.resolve(slug, NOW)).resolves.toEqual({ status: 404 });
     } else {
-      await client.stats(slug, NOW);
+      await expect(client.stats(slug, NOW)).resolves.toBeNull();
     }
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(String(fetchMock.mock.calls[0][0])).toBe(
-      `https://gateway.example.test/root/internal/links/${encodedSlug}/${operation}?now=${encodeURIComponent(NOW.toISOString())}`,
-    );
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("maps HTTP and payload missing records to the backend missing values", async () => {

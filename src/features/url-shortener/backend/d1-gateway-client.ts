@@ -34,10 +34,8 @@ function isCanonicalIso(value: unknown): value is string {
   return Number.isFinite(parsed.getTime()) && parsed.toISOString() === value;
 }
 
-function encodePathSegment(value: string): string {
-  if (value === ".") return "%2E";
-  if (value === "..") return "%2E%2E";
-  return encodeURIComponent(value);
+function isDotOnlySlug(value: string): boolean {
+  return value === "." || value === "..";
 }
 
 function parseLink(value: unknown): ShortLinkPublic {
@@ -198,14 +196,16 @@ export class D1GatewayClient implements ShortLinkBackend {
     slug: string,
     now = new Date(),
   ): Promise<{ status: 302; destinationUrl: string } | { status: 404 }> {
-    const response = await this.requestWithNow(`internal/links/${encodePathSegment(slug)}/resolve`, now);
+    if (isDotOnlySlug(slug)) return { status: 404 };
+    const response = await this.requestWithNow(`internal/links/${encodeURIComponent(slug)}/resolve`, now);
     if (response.status === 404) return { status: 404 };
     if (response.status !== 200) throw gatewayError();
     return parseResolve(await readLimitedJson(response));
   }
 
   async stats(slug: string, now = new Date()): Promise<ShortLinkStats | null> {
-    const response = await this.requestWithNow(`internal/links/${encodePathSegment(slug)}/stats`, now);
+    if (isDotOnlySlug(slug)) return null;
+    const response = await this.requestWithNow(`internal/links/${encodeURIComponent(slug)}/stats`, now);
     if (response.status === 404) return null;
     if (response.status !== 200) throw gatewayError();
     return parseLink(await readLimitedJson(response));
