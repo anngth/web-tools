@@ -7,23 +7,29 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest --run",
-    "test:watch": "vitest"
+    "test": "vitest --run --config vitest.node.config.ts",
+    "test:watch": "vitest --config vitest.node.config.ts",
+    "test:worker": "vitest --run --config vitest.worker.config.ts",
+    "test:all": "npm test && npm run test:worker"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",
     "better-sqlite3": "^12.11.1",
+    "hono": "^4.12.29",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "vite": "^8.0.16"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.18.4",
+    "@cloudflare/workers-types": "^5.20260712.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "jsdom": "^29.1.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "wrangler": "^4.110.0"
   }
 }
