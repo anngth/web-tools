@@ -23,13 +23,6 @@ function toRecord(row: ShortLinkRow): ShortLinkRecord {
   };
 }
 
-function isSlugUniqueConstraint(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    /UNIQUE constraint failed: short_links\.slug(?::|$)/.test(error.message)
-  );
-}
-
 export class D1ShortLinkStore implements ShortLinkStore {
   constructor(private readonly database: D1Database) {}
 
@@ -54,9 +47,8 @@ export class D1ShortLinkStore implements ShortLinkStore {
   }
 
   async insert(record: ShortLinkRecord): Promise<boolean> {
-    try {
-      await this.database
-        .prepare(`
+    const result = await this.database
+      .prepare(`
           INSERT INTO short_links (
             id,
             slug,
@@ -66,25 +58,23 @@ export class D1ShortLinkStore implements ShortLinkStore {
             click_count,
             last_clicked_at
           ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(slug) DO NOTHING
         `)
-        .bind(
-          record.id,
-          record.slug,
-          record.destinationUrl,
-          record.createdAt,
-          record.expiresAt,
-          record.clickCount,
-          record.lastClickedAt,
-        )
-        .run();
-      return true;
-    } catch (error) {
-      if (isSlugUniqueConstraint(error)) return false;
-      throw error;
-    }
+      .bind(
+        record.id,
+        record.slug,
+        record.destinationUrl,
+        record.createdAt,
+        record.expiresAt,
+        record.clickCount,
+        record.lastClickedAt,
+      )
+      .run();
+    return result.meta.changes > 0;
   }
 
   async incrementClicksIfActive(
+    recordId: string,
     slug: string,
     clickedAt: string,
   ): Promise<boolean> {
@@ -92,9 +82,9 @@ export class D1ShortLinkStore implements ShortLinkStore {
       .prepare(`
         UPDATE short_links
         SET click_count = click_count + 1, last_clicked_at = ?
-        WHERE slug = ? AND expires_at > ?
+        WHERE id = ? AND slug = ? AND expires_at > ?
       `)
-      .bind(clickedAt, slug, clickedAt)
+      .bind(clickedAt, recordId, slug, clickedAt)
       .run();
 
     return result.meta.changes > 0;

@@ -7,6 +7,10 @@ import {
 import { validateTtlSeconds } from "../url-shortener.validation";
 import { D1ShortLinkStore } from "./d1-store";
 import { LocalShortLinkBackend } from "./local-backend";
+import {
+  RequestBodyTooLargeError,
+  readLimitedRequestBody,
+} from "./read-limited-body";
 
 const MAX_BODY_BYTES = 16 * 1024;
 
@@ -54,8 +58,13 @@ function parseCanonicalIso(value: unknown): Date {
 }
 
 async function parseJsonBody(request: Request): Promise<unknown> {
-  const bytes = await request.arrayBuffer();
-  if (bytes.byteLength > MAX_BODY_BYTES) invalidRequest();
+  let bytes: Uint8Array;
+  try {
+    bytes = await readLimitedRequestBody(request, MAX_BODY_BYTES);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) invalidRequest();
+    throw error;
+  }
 
   try {
     return JSON.parse(new TextDecoder().decode(bytes));

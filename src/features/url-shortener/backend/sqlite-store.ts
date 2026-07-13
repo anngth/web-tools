@@ -25,14 +25,6 @@ function toRecord(row: ShortLinkRow): ShortLinkRecord {
   };
 }
 
-function isSlugUniqueConstraint(error: unknown): boolean {
-  return (
-    error instanceof Database.SqliteError &&
-    error.code === "SQLITE_CONSTRAINT_UNIQUE" &&
-    error.message === "UNIQUE constraint failed: short_links.slug"
-  );
-}
-
 export class SqliteShortLinkStore implements ShortLinkStore {
   private readonly findBySlugStatement;
   private readonly insertStatement;
@@ -71,11 +63,12 @@ export class SqliteShortLinkStore implements ShortLinkStore {
         click_count,
         last_clicked_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(slug) DO NOTHING
     `);
     this.incrementClicksIfActiveStatement = this.database.prepare(`
       UPDATE short_links
       SET click_count = click_count + 1, last_clicked_at = ?
-      WHERE slug = ? AND expires_at > ?
+      WHERE id = ? AND slug = ? AND expires_at > ?
     `);
     this.deleteExpiredStatement = this.database.prepare(`
       DELETE FROM short_links WHERE expires_at <= ?
@@ -88,29 +81,25 @@ export class SqliteShortLinkStore implements ShortLinkStore {
   }
 
   async insert(record: ShortLinkRecord): Promise<boolean> {
-    try {
-      this.insertStatement.run(
-        record.id,
-        record.slug,
-        record.destinationUrl,
-        record.createdAt,
-        record.expiresAt,
-        record.clickCount,
-        record.lastClickedAt,
-      );
-      return true;
-    } catch (error) {
-      if (isSlugUniqueConstraint(error)) return false;
-      throw error;
-    }
+    return this.insertStatement.run(
+      record.id,
+      record.slug,
+      record.destinationUrl,
+      record.createdAt,
+      record.expiresAt,
+      record.clickCount,
+      record.lastClickedAt,
+    ).changes > 0;
   }
 
   async incrementClicksIfActive(
+    recordId: string,
     slug: string,
     clickedAt: string,
   ): Promise<boolean> {
     return this.incrementClicksIfActiveStatement.run(
       clickedAt,
+      recordId,
       slug,
       clickedAt,
     ).changes > 0;

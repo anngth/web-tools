@@ -12,8 +12,15 @@ const JSON_HEADERS = { "content-type": "application/json" } as const;
 
 type JsonRecord = Record<string, unknown>;
 
+class D1GatewayOperationError extends Error {
+  constructor() {
+    super("D1 gateway operation failed");
+    this.name = "D1GatewayOperationError";
+  }
+}
+
 function gatewayError(): Error {
-  return new Error("D1 gateway operation failed");
+  return new D1GatewayOperationError();
 }
 
 function asRecord(value: unknown): JsonRecord | undefined {
@@ -121,7 +128,7 @@ async function readLimitedJson(response: Response): Promise<unknown> {
       chunks.push(value);
     }
   } catch (error) {
-    if (error instanceof Error && error.message === "D1 gateway operation failed") throw error;
+    if (error instanceof D1GatewayOperationError) throw error;
     throw gatewayError();
   }
 

@@ -8,7 +8,11 @@ import type {
 export interface ShortLinkStore {
   findBySlug(slug: string): Promise<ShortLinkRecord | null>;
   insert(record: ShortLinkRecord): Promise<boolean>;
-  incrementClicksIfActive(slug: string, clickedAt: string): Promise<boolean>;
+  incrementClicksIfActive(
+    recordId: string,
+    slug: string,
+    clickedAt: string,
+  ): Promise<boolean>;
   deleteExpired(now: string): Promise<number>;
   close?(): Promise<void> | void;
 }

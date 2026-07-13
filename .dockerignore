@@ -4,9 +4,16 @@
 .codex
 node_modules
 dist
+dist-server/
 coverage
 *.log
 .DS_Store
 .env
 .env.*
+.dev.vars
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+.wrangler
+.wrangler/state
 docs/superpowers

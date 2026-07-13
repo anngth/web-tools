@@ -11,6 +11,7 @@ class MemoryShortLinkStore implements ShortLinkStore {
   insertAttempts = 0;
   collisionsRemaining = 0;
   incrementResult: boolean | undefined;
+  beforeIncrement?: () => void;
   closed = false;
 
   async findBySlug(slug: string): Promise<ShortLinkRecord | null> {
@@ -29,12 +30,16 @@ class MemoryShortLinkStore implements ShortLinkStore {
   }
 
   async incrementClicksIfActive(
+    recordId: string,
     slug: string,
     clickedAt: string,
   ): Promise<boolean> {
+    this.beforeIncrement?.();
     if (this.incrementResult !== undefined) return this.incrementResult;
     const record = this.records.get(slug);
-    if (!record || record.expiresAt <= clickedAt) return false;
+    if (!record || record.id !== recordId || record.expiresAt <= clickedAt) {
+      return false;
+    }
     this.records.set(slug, {
       ...record,
       clickCount: record.clickCount + 1,
@@ -221,6 +226,31 @@ describe("LocalShortLinkBackend", () => {
     await expect(
       backend.resolve("docs", new Date("2026-07-12T00:04:59.999Z")),
     ).resolves.toEqual({ status: 404 });
+  });
+
+  it("does not increment a replacement record created under the same slug", async () => {
+    const store = new MemoryShortLinkStore();
+    store.records.set("docs", record());
+    store.beforeIncrement = () => {
+      store.beforeIncrement = undefined;
+      store.records.set(
+        "docs",
+        record({
+          id: "replacement-id",
+          destinationUrl: "https://example.com/replacement",
+        }),
+      );
+    };
+    const backend = new LocalShortLinkBackend(store, 300);
+
+    await expect(
+      backend.resolve("docs", new Date("2026-07-12T00:04:59.999Z")),
+    ).resolves.toEqual({ status: 404 });
+    expect(store.records.get("docs")).toMatchObject({
+      id: "replacement-id",
+      clickCount: 0,
+      lastClickedAt: null,
+    });
   });
 
   it("treats the exact expiration boundary as missing and cleans it up", async () => {

@@ -53,7 +53,7 @@ export function describeShortLinkStoreContract(
       const clickedAt = "2026-07-12T00:04:59.999Z";
 
       await expect(
-        store.incrementClicksIfActive("docs", clickedAt),
+        store.incrementClicksIfActive("id-docs", "docs", clickedAt),
       ).resolves.toBe(true);
       await expect(store.findBySlug("docs")).resolves.toMatchObject({
         clickCount: 1,
@@ -68,9 +68,33 @@ export function describeShortLinkStoreContract(
       await store.insert(record("docs"));
 
       await expect(
-        store.incrementClicksIfActive("docs", "2026-07-12T00:05:00.000Z"),
+        store.incrementClicksIfActive(
+          "id-docs",
+          "docs",
+          "2026-07-12T00:05:00.000Z",
+        ),
       ).resolves.toBe(false);
       await expect(store.findBySlug("docs")).resolves.toMatchObject({
+        clickCount: 0,
+        lastClickedAt: null,
+      });
+
+      await store.close?.();
+    });
+
+    it("does not increment a different record that reused the slug", async () => {
+      const store = await createStore();
+      await store.insert(record("docs"));
+
+      await expect(
+        store.incrementClicksIfActive(
+          "different-record-id",
+          "docs",
+          "2026-07-12T00:04:59.999Z",
+        ),
+      ).resolves.toBe(false);
+      await expect(store.findBySlug("docs")).resolves.toMatchObject({
+        id: "id-docs",
         clickCount: 0,
         lastClickedAt: null,
       });

@@ -192,6 +192,66 @@ describe("authenticated D1 Worker gateway", () => {
     expect(await missingStats.json()).toEqual({ error: "not_found" });
   });
 
+  it("returns 404 without incrementing a new record that reuses the resolved slug", async () => {
+    await create("race-link");
+    const replacementId = "replacement-id";
+    const racingDb = {
+      ...env.DB,
+      prepare(query: string) {
+        const statement = env.DB.prepare(query);
+        if (!query.includes("UPDATE short_links")) return statement;
+
+        return {
+          bind(...values: unknown[]) {
+            const bound = statement.bind(...values);
+            return {
+              async run() {
+                await env.DB.prepare("DELETE FROM short_links WHERE slug = ?")
+                  .bind("race-link")
+                  .run();
+                await env.DB.prepare(`
+                  INSERT INTO short_links (
+                    id, slug, destination_url, created_at, expires_at,
+                    click_count, last_clicked_at
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                `)
+                  .bind(
+                    replacementId,
+                    "race-link",
+                    "https://example.com/replacement",
+                    "2026-07-12T00:00:01.000Z",
+                    NOW,
+                    0,
+                    null,
+                  )
+                  .run();
+                return bound.run();
+              },
+            };
+          },
+        } as unknown as D1PreparedStatement;
+      },
+    } as D1Database;
+
+    const response = await worker.request(
+      `/internal/links/race-link/resolve?now=${encodeURIComponent(
+        "2026-07-12T00:04:59.999Z",
+      )}`,
+      { headers: { authorization: "Bearer test-secret" } },
+      { ...env, DB: racingDb },
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: 404 });
+    expect(
+      await env.DB.prepare(
+        "SELECT id, click_count FROM short_links WHERE slug = ?",
+      )
+        .bind("race-link")
+        .first(),
+    ).toEqual({ id: replacementId, click_count: 0 });
+  });
+
   it("deletes expired rows and returns the cleanup count", async () => {
     await create("first");
     await create("second");

@@ -9,6 +9,17 @@ services:
     restart: unless-stopped
     expose:
       - "8080"
+    environment:
+      NODE_ENV: production
+      DATABASE_BACKEND: ${DATABASE_BACKEND:-sqlite}
+      SQLITE_PATH: ${SQLITE_PATH:-/data/url-shortener.sqlite}
+      URL_SHORTENER_TTL_SECONDS: ${URL_SHORTENER_TTL_SECONDS:-2592000}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required}
+      D1_GATEWAY_URL: ${D1_GATEWAY_URL:-}
+      D1_GATEWAY_TOKEN: ${D1_GATEWAY_TOKEN:-}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+    volumes:
+      - url-shortener-data:/data
     read_only: true
     tmpfs:
       - /tmp:size=16m,mode=1777
@@ -16,3 +27,12 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  url-shortener-data:

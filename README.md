@@ -1,6 +1,6 @@
 # Web Tools
 
-A collection of client-side web utilities built with React, starting with a TOTP token generator.
+A React toolbox with a TOTP generator and a persistent URL shortener. Production is one unprivileged Node container serving the existing application, API, redirects, and health endpoint on port 8080.
 
 ## Tools
 
@@ -17,6 +17,14 @@ A collection of client-side web utilities built with React, starting with a TOTP
 - Light mode by default with dark mode toggle
 - Responsive sidebar with collapse/expand functionality
 - No backend, no API calls, no secret storage
+
+### URL Shortener
+
+- Creates generated or custom short links with public statistics
+- Enforces one server-controlled lifetime for every link
+- Uses local SQLite or an authenticated Cloudflare D1 gateway selected at startup
+- Deletes expired links at startup and on a fixed five-minute schedule
+- Keeps SQLite and D1 as independent datasets; switching backends requires a restart and does not migrate, replicate, or fail over records
 
 ## Project Structure
 
@@ -63,19 +71,41 @@ Or use the standard `otpauth://` URI format:
 
 ## Local Development
 
+Run the browser and API as two processes in separate shells:
+
 ```bash
 npm install
 npm run dev
 ```
 
+```bash
+DATABASE_BACKEND=sqlite \
+SQLITE_PATH=./url-shortener.sqlite \
+URL_SHORTENER_TTL_SECONDS=2592000 \
+npm run dev:server
+```
+
+Vite proxies `/api` and `/s` to the Node process. Local development may derive short links from the request origin; production must always set `PUBLIC_BASE_URL`. Query the API process directly at `http://127.0.0.1:8080/healthz` for local readiness.
+
 ## Production Build
 
 ```bash
 npm run build
-npm run preview
+npm run build:server
 ```
 
-Deploy the generated `dist/` directory to any static hosting provider.
+Compose requires the public HTTP(S) origin and starts the one hardened service with the default 30-day TTL and SQLite volume:
+
+```bash
+PUBLIC_BASE_URL=https://tools.example.com docker compose up --build -d
+PUBLIC_BASE_URL=https://tools.example.com docker compose ps
+```
+
+`PUBLIC_BASE_URL` must be an absolute HTTP(S) origin with no credentials, path, query, or fragment. `URL_SHORTENER_TTL_SECONDS` defaults to `2592000` and must be a positive integer. Invalid production URL, TTL, backend, SQLite path, D1 settings, or `TRUST_PROXY` values fail startup before the service listens.
+
+The service is ready only after configuration validation, backend construction, schema initialization, and startup cleanup. Check it inside the Compose network with `GET /healthz`; Docker also runs this readiness check. Cleanup then runs every fixed `300000` ms without overlap. SIGTERM/SIGINT stops new work, stops scheduling, drains in-flight requests and cleanup for at most 10 seconds, closes the backend once, and exits.
+
+See the [backend operations runbook](src/features/url-shortener/backend/README.md) for logs, SQLite backup and restore, D1 deployment and token rotation, smoke tests, incident events, and security limitations.
 
 ## SEO
 
@@ -91,4 +121,4 @@ The project includes:
 
 ## Security
 
-All cryptographic operations are performed client-side using the Web Crypto API. Your secret keys are never transmitted over the network, stored in cookies, or logged anywhere. The application works entirely offline after the initial page load.
+TOTP cryptographic operations remain client-side: secrets are not sent to the URL Shortener API, stored in cookies, or logged. URL Shortener logs are structured JSON on stdout/stderr and deliberately exclude destination URLs, credentials, authorization headers, request bodies, database paths, SQL, and raw gateway responses.

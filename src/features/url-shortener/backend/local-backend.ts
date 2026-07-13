@@ -73,7 +73,7 @@ export class LocalShortLinkBackend implements ShortLinkBackend {
       return { status: 404 };
     }
 
-    if (!(await this.store.incrementClicksIfActive(slug, nowIso))) {
+    if (!(await this.store.incrementClicksIfActive(record.id, slug, nowIso))) {
       return { status: 404 };
     }
 

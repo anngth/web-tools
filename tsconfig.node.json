@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": [
+    "src/features/url-shortener/backend/**/*.ts",
+    "src/features/url-shortener/url-shortener.model.ts",
+    "src/features/url-shortener/url-shortener.validation.ts"
+  ],
+  "exclude": [
+    "src/features/url-shortener/backend/**/*.test.ts",
+    "src/features/url-shortener/backend/worker.ts",
+    "src/features/url-shortener/backend/d1-store.ts",
+    "src/features/url-shortener/backend/worker-test.setup.ts",
+    "src/features/url-shortener/backend/cloudflare-types.d.ts"
+  ]
+}

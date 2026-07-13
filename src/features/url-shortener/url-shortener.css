@@ -1,0 +1,236 @@
+.urlShortener {
+  display: grid;
+  gap: var(--spacing-lg);
+}
+
+.urlShortenerForm {
+  display: grid;
+  gap: var(--spacing-xs);
+}
+
+.urlShortenerForm .field {
+  margin-bottom: 0;
+}
+
+.urlShortenerForm .field + .field {
+  margin-top: var(--spacing-xs);
+}
+
+.urlShortenerHelp {
+  margin-top: 2px;
+}
+
+.urlShortenerFormActions {
+  display: grid;
+  gap: var(--spacing-xs);
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.urlShortenerPrimary,
+.urlShortenerSecondary,
+.urlShortenerCopy,
+.urlShortenerRefresh {
+  align-items: center;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  gap: var(--spacing-xs);
+  justify-content: center;
+  min-height: var(--button-height);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.urlShortenerPrimary {
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  color: #ffffff;
+  font-weight: 700;
+  padding: 0 var(--spacing-md);
+}
+
+.urlShortenerPrimary:hover:not(:disabled) {
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
+}
+
+.urlShortenerSecondary,
+.urlShortenerRefresh {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 0 var(--spacing-md);
+}
+
+.urlShortenerSecondary:hover:not(:disabled),
+.urlShortenerRefresh:hover:not(:disabled) {
+  background: var(--surface-strong);
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+.urlShortenerPrimary:active:not(:disabled),
+.urlShortenerSecondary:active:not(:disabled),
+.urlShortenerCopy:active:not(:disabled),
+.urlShortenerRefresh:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.urlShortenerPrimary:disabled,
+.urlShortenerSecondary:disabled,
+.urlShortenerCopy:disabled,
+.urlShortenerRefresh:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.app.dark .urlShortenerPrimary {
+  color: #102824;
+}
+
+.urlShortenerResults {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-lg);
+}
+
+.urlShortenerResults h2 {
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.urlShortenerResultList {
+  display: grid;
+  gap: var(--spacing-sm);
+}
+
+.urlShortenerRelay {
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+}
+
+.urlShortenerRoute {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.urlShortenerRouteLabel {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.urlShortenerDestination,
+.urlShortenerShortUrl {
+  font-family:
+    SFMono-Regular, Consolas, "Liberation Mono", Menlo, ui-monospace,
+    monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.urlShortenerDestination {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.urlShortenerRelayArrow {
+  color: var(--primary);
+  margin: 2px 0;
+}
+
+.urlShortenerShortUrl {
+  color: var(--text);
+  font-size: clamp(0.92rem, 4vw, 1.08rem);
+}
+
+.urlShortenerCopy {
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  color: #ffffff;
+  font-weight: 700;
+  padding: 0 var(--spacing-md);
+  width: 100%;
+}
+
+.urlShortenerCopy:hover:not(:disabled) {
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
+}
+
+.urlShortenerCopy.isCopied {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.app.dark .urlShortenerCopy {
+  color: #102824;
+}
+
+.urlShortenerStats {
+  display: grid;
+  gap: var(--spacing-xs);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.urlShortenerStats div {
+  min-width: 0;
+}
+
+.urlShortenerStats div:last-child {
+  grid-column: 1 / -1;
+}
+
+.urlShortenerStats dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.urlShortenerStats dd {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  margin: 3px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.urlShortenerRefresh {
+  justify-self: start;
+}
+
+@media (max-width: 420px) {
+  .urlShortenerFormActions {
+    grid-template-columns: 1fr;
+  }
+
+  .urlShortenerSecondary {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .urlShortenerPrimary,
+  .urlShortenerSecondary,
+  .urlShortenerCopy,
+  .urlShortenerRefresh {
+    transition: none;
+  }
+}
