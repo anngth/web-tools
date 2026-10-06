@@ -119,6 +119,10 @@ The project includes:
 - ✅ Robots.txt
 - ✅ PWA Manifest
 
+Each tool has its own path (`/totp`, `/url-shortener`). The Node server renders `index.html` per path, so the title, description, canonical URL and JSON-LD are correct without running JavaScript. It also fills the `__SITE_ORIGIN__` placeholder in `index.html`, `robots.txt` and `sitemap.xml` from `PUBLIC_BASE_URL`. Tool metadata lives in `src/app/toolSeoData.ts`.
+
+Because of that placeholder, `dist/` must be served by the Node server: a plain static host or CDN would publish the literal `__SITE_ORIGIN__`. `npm run dev` shows it in the raw HTML (the browser corrects the canonical link at runtime).
+
 ## Security
 
 TOTP cryptographic operations remain client-side: secrets are not sent to the URL Shortener API, stored in cookies, or logged. URL Shortener logs are structured JSON on stdout/stderr and deliberately exclude destination URLs, credentials, authorization headers, request bodies, database paths, SQL, and raw gateway responses.

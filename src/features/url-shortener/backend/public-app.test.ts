@@ -457,12 +457,82 @@ describe("createPublicApp", () => {
     expect(plain.headers.get("Cache-Control")).toBe("no-cache");
   });
 
+  it("fills the site origin placeholder from PUBLIC_BASE_URL", async () => {
+    const staticRoot = await createStaticRoot();
+    await writeFile(
+      join(staticRoot, "index.html"),
+      '<link rel="canonical" href="__SITE_ORIGIN__/" /><a href="__SITE_ORIGIN__/x"></a>',
+    );
+    await writeFile(
+      join(staticRoot, "robots.txt"),
+      "Sitemap: __SITE_ORIGIN__/sitemap.xml",
+    );
+    await writeFile(
+      join(staticRoot, "sitemap.xml"),
+      "<loc>__SITE_ORIGIN__/url-shortener</loc>",
+    );
+    const application = app({
+      staticRoot,
+      publicBaseUrl: "https://example.org",
+    });
+
+    const index = await application.request("/");
+    const spa = await application.request("/url-shortener");
+    const robots = await application.request("/robots.txt");
+    const sitemap = await application.request("/sitemap.xml");
+
+    expect(await index.text()).toBe(
+      '<link rel="canonical" href="https://example.org/totp" /><a href="https://example.org/x"></a>',
+    );
+    expect(await spa.text()).toContain("https://example.org/x");
+    expect(await robots.text()).toBe(
+      "Sitemap: https://example.org/sitemap.xml",
+    );
+    expect(sitemap.headers.get("content-type")).toContain("application/xml");
+    expect(await sitemap.text()).toBe(
+      "<loc>https://example.org/url-shortener</loc>",
+    );
+  });
+
+  it("serves per-tool metadata in the HTML for each SPA path", async () => {
+    const staticRoot = await createStaticRoot();
+    await writeFile(
+      join(staticRoot, "index.html"),
+      '<title>TOTP Generator | Web Tools</title><link rel="canonical" href="__SITE_ORIGIN__/totp" />',
+    );
+    const application = app({
+      staticRoot,
+      publicBaseUrl: "https://example.org",
+    });
+
+    const shortener = await (await application.request("/url-shortener")).text();
+    const unknown = await (await application.request("/bogus")).text();
+
+    expect(shortener).toContain("<title>URL Shortener | Web Tools</title>");
+    expect(shortener).toContain('href="https://example.org/url-shortener"');
+    expect(unknown).toContain("<title>TOTP Generator - Free 2FA Codes | Web Tools</title>");
+    expect(unknown).toContain('href="https://example.org/totp"');
+  });
+
+  it("returns 404 instead of the app shell when robots.txt or sitemap.xml is missing", async () => {
+    const staticRoot = await createStaticRoot();
+    await rm(join(staticRoot, "robots.txt"));
+    const application = app({ staticRoot });
+
+    const robots = await application.request("/robots.txt");
+    const sitemap = await application.request("/sitemap.xml");
+
+    expect(robots.status).toBe(404);
+    expect(sitemap.status).toBe(404);
+    expect(await robots.json()).toEqual({ error: "not_found" });
+  });
+
   it("falls back to index.html for SPA routes but never for API paths", async () => {
     const staticRoot = await createStaticRoot();
     const log = logger();
     const application = app({ staticRoot, logger: log });
 
-    const spa = await application.request("/tools/url-shortener");
+    const spa = await application.request("/url-shortener");
     const api = await application.request("/api/unknown");
 
     expect(spa.status).toBe(200);

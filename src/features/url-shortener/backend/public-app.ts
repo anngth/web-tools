@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono, type Context } from "hono";
 import {
@@ -11,6 +13,7 @@ import {
   RequestBodyTooLargeError,
   readLimitedRequestBody,
 } from "./read-limited-body";
+import { renderIndexHtml, renderSiteOrigin } from "./index-html";
 import type { ShortLinkBackend } from "./short-link-backend";
 
 const MAX_JSON_BODY_BYTES = 16 * 1024;
@@ -166,19 +169,80 @@ export function createPublicApp(options: {
       }
     };
     const staticFiles = serveStatic({ root: options.staticRoot });
-    const indexFallback = serveStatic({
-      root: options.staticRoot,
-      path: "index.html",
-    });
+    // Files that carry absolute URLs use a placeholder so the deployed domain
+    // comes from PUBLIC_BASE_URL (or the request origin in local development).
+    const templateRoot = resolve(options.staticRoot);
+    const templateSources = new Map<string, Promise<string | undefined>>();
+    const loadTemplate = (file: string): Promise<string | undefined> => {
+      let source = templateSources.get(file);
+      if (source === undefined) {
+        const pending = readFile(join(templateRoot, file), "utf8").catch(
+          () => undefined,
+        );
+        // Only successful reads stay cached, so a late-arriving file is picked up.
+        void pending.then((value) => {
+          if (value === undefined) templateSources.delete(file);
+        });
+        templateSources.set(file, pending);
+        source = pending;
+      }
+      return source;
+    };
+    const serveTemplate =
+      (
+        file: string,
+        contentType: string,
+        cacheControl: string,
+        config: {
+          render?: (source: string, origin: string, path: string) => string;
+          onMissing: "next" | "not_found";
+        },
+      ) =>
+      async (context: Context, next: () => Promise<void>) => {
+        const source = await loadTemplate(file);
+        if (source === undefined) {
+          return config.onMissing === "next"
+            ? next()
+            : publicError(context, 404, "not_found");
+        }
+        const origin = configuredOrigin ?? new URL(context.req.url).origin;
+        const render = config.render ?? renderSiteOrigin;
+        return context.body(render(source, origin, context.req.path), 200, {
+          "Content-Type": contentType,
+          "Cache-Control": cacheControl,
+        });
+      };
+    const serveIndex = serveTemplate(
+      "index.html",
+      "text/html; charset=utf-8",
+      "no-store",
+      {
+        render: (source, origin, path) =>
+          renderIndexHtml(source, origin, path),
+        onMissing: "next",
+      },
+    );
+
+    app.get(
+      "/robots.txt",
+      serveTemplate("robots.txt", "text/plain; charset=utf-8", "no-cache", {
+        onMissing: "not_found",
+      }),
+    );
+    app.get(
+      "/sitemap.xml",
+      serveTemplate("sitemap.xml", "application/xml; charset=utf-8", "no-cache", {
+        onMissing: "not_found",
+      }),
+    );
+    app.get("/", serveIndex);
+    app.get("/index.html", serveIndex);
 
     app.get("*", async (context, next) => {
       setStaticCacheHeader(context.req.path, context);
       return staticFiles(context, next);
     });
-    app.get("*", async (context, next) => {
-      context.header("Cache-Control", "no-store");
-      return indexFallback(context, next);
-    });
+    app.get("*", serveIndex);
   }
 
   app.notFound((context) => publicError(context, 404, "not_found"));

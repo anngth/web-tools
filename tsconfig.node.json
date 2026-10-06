@@ -5,6 +5,7 @@
   },
   "include": [
     "src/features/url-shortener/backend/**/*.ts",
+    "src/app/toolSeoData.ts",
     "src/features/url-shortener/url-shortener.model.ts",
     "src/features/url-shortener/url-shortener.validation.ts"
   ],

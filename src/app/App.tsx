@@ -1,9 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "./layout/AppShell";
+import {
+  canonicalPathname,
+  pathnameForTool,
+  toolIdFromPathname,
+} from "./toolRoute";
 import { type ToolId, tools } from "./toolRegistry";
+import { applyToolSeo } from "./toolSeo";
 
 export function App() {
-  const [activeToolId, setActiveToolId] = useState<ToolId>(tools[0].id);
+  const [activeToolId, setActiveToolId] = useState<ToolId>(() =>
+    toolIdFromPathname(window.location.pathname),
+  );
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -11,9 +19,33 @@ export function App() {
   const activeTool = tools.find((tool) => tool.id === activeToolId) ?? tools[0];
   const ActivePage = activeTool.Page;
 
+  useEffect(() => {
+    applyToolSeo(activeTool.id);
+  }, [activeTool.id]);
+
+  useEffect(() => {
+    // Canonicalize unknown paths and trailing slashes without adding history.
+    const canonical = canonicalPathname(window.location.pathname);
+    if (window.location.pathname !== canonical) {
+      const { search, hash } = window.location;
+      window.history.replaceState(null, "", `${canonical}${search}${hash}`);
+    }
+
+    function syncToolFromAddress() {
+      setActiveToolId(toolIdFromPathname(window.location.pathname));
+    }
+
+    window.addEventListener("popstate", syncToolFromAddress);
+    return () => window.removeEventListener("popstate", syncToolFromAddress);
+  }, []);
+
   function selectTool(toolId: ToolId) {
     setActiveToolId(toolId);
     setSidebarOpen(false);
+    const nextPath = pathnameForTool(toolId);
+    if (window.location.pathname === nextPath) return;
+
+    window.history.pushState(null, "", nextPath);
   }
 
   return (
