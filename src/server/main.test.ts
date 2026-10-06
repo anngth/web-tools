@@ -116,22 +116,22 @@ describe("startDockerServer configuration and startup", () => {
   });
 
   it.each([
-    ["missing PUBLIC_BASE_URL", { ...VALID_ENV, PUBLIC_BASE_URL: undefined }],
-    ["invalid PUBLIC_BASE_URL", { ...VALID_ENV, PUBLIC_BASE_URL: "https://sho.rt/path" }],
-    ["invalid TRUST_PROXY", { ...VALID_ENV, TRUST_PROXY: "yes" }],
-    ["invalid RATE_LIMIT_PER_HOUR", { ...VALID_ENV, RATE_LIMIT_PER_HOUR: "lots" }],
+    ["missing PUBLIC_BASE_URL", { ...VALID_ENV, PUBLIC_BASE_URL: undefined }, "public_base_url_missing"],
+    ["invalid PUBLIC_BASE_URL", { ...VALID_ENV, PUBLIC_BASE_URL: "https://sho.rt/path" }, "public_base_url_invalid"],
+    ["invalid TRUST_PROXY", { ...VALID_ENV, TRUST_PROXY: "yes" }, "trust_proxy_invalid"],
+    ["invalid RATE_LIMIT_PER_HOUR", { ...VALID_ENV, RATE_LIMIT_PER_HOUR: "lots" }, "rate_limit_invalid"],
     ["all rate limit windows disabled", {
       ...VALID_ENV,
       RATE_LIMIT_PER_MINUTE: "0",
       RATE_LIMIT_PER_HOUR: "0",
       RATE_LIMIT_PER_DAY: "0",
-    }],
-  ])("rejects %s before constructing a backend or listening", async (_name, env) => {
+    }, "rate_limit_invalid"],
+  ])("rejects %s before constructing a backend or listening", async (_name, env, reason) => {
     const harness = createHarness();
 
-    await expect(startDockerServer({ env, dependencies: harness.dependencies })).rejects.toThrow(
-      /configuration|PUBLIC_BASE_URL|TRUST_PROXY|RATE_LIMIT/,
-    );
+    await expect(startDockerServer({ env, dependencies: harness.dependencies })).rejects.toMatchObject({
+      reason,
+    });
 
     expect(harness.dependencies.createBackend).not.toHaveBeenCalled();
     expect(harness.dependencies.listen).not.toHaveBeenCalled();

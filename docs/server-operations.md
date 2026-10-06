@@ -31,10 +31,10 @@ PUBLIC_BASE_URL=https://tools.example.com docker compose up --build -d
 Failure logs one JSON line and exits 1:
 
 ```json
-{"timestamp":"2026-07-12T03:04:05.006Z","level":"error","event":"server_start_failed","reason":"invalid_configuration_or_startup_failure"}
+{"timestamp":"2026-07-12T03:04:05.006Z","level":"error","event":"server_start_failed","reason":"public_base_url_missing"}
 ```
 
-That reason covers invalid configuration and a Postgres open or schema failure. The log does not include `DATABASE_URL`, gateway URLs, tokens, probe HTTP status, SQL, or driver text.
+`reason` names which check failed. The log does not include `DATABASE_URL`, gateway URLs, tokens, probe HTTP status, SQL, or driver text.
 
 ## Health, cleanup, and shutdown
 
@@ -59,7 +59,7 @@ docker logs -f <container>
 
 Application logging has no file rotation. Operators must configure retention and rotation in the Docker logging driver.
 
-Useful lifecycle and incident events are `server_start`, `server_ready`, `link_created`, `cleanup_completed`, `cleanup_skipped`, `cleanup_failed`, `request_failed`, `shutdown_started`, and `shutdown_completed`. A successful link creation writes one `link_created` info line with `requestId` only. Startup records include `backendType` (`d1` or `postgres`), port 8080, and `intervalMs: 300000`. When `backendType` is `postgres`, `server_start` and `server_ready` also include `reason: "d1_unavailable"`. That reason is not an error. Cleanup completion includes its trigger, deletion count, and duration. `server_start_failed` with `reason: "invalid_configuration_or_startup_failure"` means the process exited before listen. Correlate unexpected request failures using the safe request ID returned in the response header.
+Useful lifecycle and incident events are `server_start`, `server_ready`, `link_created`, `cleanup_completed`, `cleanup_skipped`, `cleanup_failed`, `request_failed`, `shutdown_started`, and `shutdown_completed`. A successful link creation writes one `link_created` info line with `requestId` only. Startup records include `backendType` (`d1` or `postgres`), port 8080, and `intervalMs: 300000`. When `backendType` is `postgres`, `server_start` and `server_ready` also include `reason: "d1_unavailable"`. That reason is not an error. Cleanup completion includes its trigger, deletion count, and duration. `server_start_failed` means the process exited before listen. `reason` names the failed check: `public_base_url_missing`, `public_base_url_invalid`, `trust_proxy_invalid`, `rate_limit_invalid`, `ttl_invalid`, `max_active_links_invalid`, `database_url_invalid`, `postgres_unreachable`, `postgres_authentication_failed`, `postgres_database_missing`, `postgres_open_failed`, `startup_cleanup_failed`, or `listen_failed`. An unrecognized failure stays `invalid_configuration_or_startup_failure`. The line still omits `DATABASE_URL`, driver text, and SQL. Correlate unexpected request failures using the safe request ID returned in the response header.
 
 Logs must never contain destination URLs, bearer tokens, secrets, authorization headers, request bodies, `DATABASE_URL`, raw SQL errors, or raw gateway response bodies. Validation, collision, missing/expired-link, and rate-limit responses are expected and are not error events. If a prohibited value appears, restrict log access, rotate the affected credential, preserve only redacted evidence, and investigate the logging path before restarting traffic.
 

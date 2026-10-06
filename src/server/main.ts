@@ -16,6 +16,7 @@ import { createJsonLogger, type AppLogger } from "./http/logger";
 import { createPublicApp } from "./http/public-app";
 import { parseRateLimitRules, type RateLimitEnvironment } from "./http/limits-config";
 import { createRateLimiter, resolveClientKey } from "./http/rate-limiter";
+import { StartupFailure, startupFailureReason } from "./startup-failure.ts";
 
 export const CLEANUP_INTERVAL_MS = 300_000 as const;
 export const SHUTDOWN_TIMEOUT_MS = 10_000 as const;
@@ -110,7 +111,12 @@ export async function startDockerServer(options: {
   const dependencies = options.dependencies ?? defaultDependencies;
   const publicBaseUrl = validatePublicBaseUrl(env.PUBLIC_BASE_URL, env.NODE_ENV);
   const trustProxy = parseTrustProxy(env.TRUST_PROXY);
-  const rateLimitRules = parseRateLimitRules(env);
+  let rateLimitRules;
+  try {
+    rateLimitRules = parseRateLimitRules(env);
+  } catch {
+    throw new StartupFailure("rate_limit_invalid");
+  }
   const selection = await dependencies.createBackend(env);
   const startupFields = {
     backendType: selection.backendType,
@@ -141,7 +147,12 @@ export async function startDockerServer(options: {
     port: PORT,
     intervalMs: CLEANUP_INTERVAL_MS,
   });
-  await cleanup.run("startup");
+  try {
+    await cleanup.run("startup");
+  } catch (error) {
+    if (error instanceof StartupFailure) throw error;
+    throw new StartupFailure("startup_cleanup_failed");
+  }
   cleanup.start();
 
   let listener!: RuntimeListener;
@@ -206,7 +217,7 @@ export async function startDockerServer(options: {
     resolveListening,
   );
   const handleListenerError = (_error: Error): void => {
-    rejectListening(new Error("Server failed to listen"));
+    rejectListening(new StartupFailure("listen_failed"));
   };
   listener.once("error", handleListenerError);
   dependencies.registerSignal("SIGTERM", handleSignal);
@@ -235,7 +246,7 @@ export async function startDockerServer(options: {
 function parseTrustProxy(value: string | undefined): boolean {
   if (value === undefined || value === "false") return false;
   if (value === "true") return true;
-  throw new TypeError("TRUST_PROXY configuration is invalid");
+    throw new StartupFailure("trust_proxy_invalid");
 }
 
 function validatePublicBaseUrl(
@@ -244,7 +255,7 @@ function validatePublicBaseUrl(
 ): string | undefined {
   if (value === undefined) {
     if (nodeEnvironment === "production") {
-      throw new TypeError("PUBLIC_BASE_URL is required in production");
+      throw new StartupFailure("public_base_url_missing");
     }
     return undefined;
   }
@@ -253,7 +264,7 @@ function validatePublicBaseUrl(
   try {
     url = new URL(value);
   } catch {
-    throw new TypeError("PUBLIC_BASE_URL configuration is invalid");
+    throw new StartupFailure("public_base_url_invalid");
   }
   if (
     (url.protocol !== "http:" && url.protocol !== "https:") ||
@@ -263,7 +274,7 @@ function validatePublicBaseUrl(
     url.search !== "" ||
     url.hash !== ""
   ) {
-    throw new TypeError("PUBLIC_BASE_URL configuration is invalid");
+    throw new StartupFailure("public_base_url_invalid");
   }
   return url.origin;
 }
@@ -273,12 +284,12 @@ const isEntrypoint =
   import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isEntrypoint) {
-  void startDockerServer().catch(() => {
+  void startDockerServer().catch((error: unknown) => {
     console.error(JSON.stringify({
       timestamp: new Date().toISOString(),
       level: "error",
       event: "server_start_failed",
-      reason: "invalid_configuration_or_startup_failure",
+      reason: startupFailureReason(error),
     }));
     process.exit(1);
   });

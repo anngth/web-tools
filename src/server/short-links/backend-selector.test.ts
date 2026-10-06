@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ShortLinkStore } from "../../shared/short-links/short-link-backend.ts";
+import { StartupFailure } from "../startup-failure.ts";
 import { selectShortLinkBackend } from "./backend-selector";
 
 const d1Env = {
@@ -60,7 +61,7 @@ describe("selectShortLinkBackend", () => {
     await expect(selectShortLinkBackend(
       { ...d1Env, DATABASE_URL: undefined },
       { probeD1: async () => false, openPostgres: vi.fn() },
-    )).rejects.toThrow("Invalid short link backend configuration");
+    )).rejects.toMatchObject({ reason: "database_url_invalid" });
   });
 
   it("hides driver text when Postgres open fails", async () => {
@@ -71,7 +72,33 @@ describe("selectShortLinkBackend", () => {
       probeD1: async () => false,
       openPostgres,
     }).catch((caught: unknown) => caught);
-    expect(error).toEqual(new Error("Invalid short link backend configuration"));
+    expect(error).toBeInstanceOf(StartupFailure);
+    expect(error).toMatchObject({
+      message: "Invalid short link backend configuration",
+      reason: "postgres_open_failed",
+    });
+    expect(String(error)).not.toContain("password");
+  });
+
+  it.each([
+    ["3D000", "postgres_database_missing", 'database "web_tools" does not exist'],
+    ["28P01", "postgres_authentication_failed", "password authentication failed"],
+    ["ENOTFOUND", "postgres_unreachable", "getaddrinfo ENOTFOUND postgres"],
+  ])("classifies Postgres code %s as %s without driver text", async (code, reason, driverText) => {
+    const error = await selectShortLinkBackend(d1Env, {
+      probeD1: async () => false,
+      openPostgres: async () => {
+        throw Object.assign(new Error(driverText), { code });
+      },
+    }).catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({
+      message: "Invalid short link backend configuration",
+      reason,
+    });
+    expect(String(error)).not.toContain("web_tools");
+    expect(String(error)).not.toContain("password");
+    expect(String(error)).not.toContain("getaddrinfo");
   });
 
   it("rejects an invalid TTL before probing", async () => {
@@ -80,7 +107,7 @@ describe("selectShortLinkBackend", () => {
     await expect(selectShortLinkBackend(
       { ...d1Env, URL_SHORTENER_TTL_SECONDS: "0" },
       { probeD1, openPostgres },
-    )).rejects.toThrow("Invalid short link backend configuration");
+    )).rejects.toMatchObject({ reason: "ttl_invalid" });
     expect(probeD1).not.toHaveBeenCalled();
     expect(openPostgres).not.toHaveBeenCalled();
   });
@@ -91,7 +118,7 @@ describe("selectShortLinkBackend", () => {
     await expect(selectShortLinkBackend(
       { ...d1Env, MAX_ACTIVE_LINKS: "many" },
       { probeD1, openPostgres },
-    )).rejects.toThrow(new Error("Invalid short link backend configuration"));
+    )).rejects.toMatchObject({ reason: "max_active_links_invalid" });
     expect(probeD1).not.toHaveBeenCalled();
     expect(openPostgres).not.toHaveBeenCalled();
   });
@@ -107,7 +134,7 @@ describe("selectShortLinkBackend", () => {
         DATABASE_URL: "http://localhost/db",
       },
       { probeD1, openPostgres },
-    )).rejects.toThrow(new Error("Invalid short link backend configuration"));
+    )).rejects.toMatchObject({ reason: "database_url_invalid" });
     expect(probeD1).not.toHaveBeenCalled();
     expect(openPostgres).not.toHaveBeenCalled();
   });

@@ -2,10 +2,9 @@ import { parseMaxActiveLinks, type MaxActiveLinksEnvironment } from "../http/lim
 import { LocalShortLinkBackend } from "../../shared/short-links/local-backend.ts";
 import type { ShortLinkBackend, ShortLinkStore } from "../../shared/short-links/short-link-backend.ts";
 import { validateTtlSeconds } from "../../shared/short-links/validation.ts";
+import { StartupFailure, postgresStartupReason } from "../startup-failure.ts";
 import { D1GatewayClient } from "./d1-gateway-client.ts";
 import { PostgresShortLinkStore } from "./postgres-store.ts";
-
-const INVALID_CONFIGURATION = "Invalid short link backend configuration";
 
 export interface BackendEnvironment extends MaxActiveLinksEnvironment {
   D1_GATEWAY_URL?: string;
@@ -27,8 +26,10 @@ export interface ShortLinkBackendDependencies {
   openPostgres: (databaseUrl: string) => Promise<ShortLinkStore>;
 }
 
-function configurationError(): Error {
-  return new Error(INVALID_CONFIGURATION);
+function configurationError(
+  reason: "ttl_invalid" | "max_active_links_invalid" | "database_url_invalid",
+): StartupFailure {
+  return new StartupFailure(reason);
 }
 
 function trimmed(value: string | undefined): string {
@@ -68,12 +69,12 @@ function requirePostgresUrl(env: BackendEnvironment): string {
   try {
     url = new URL(databaseUrl);
   } catch {
-    throw configurationError();
+    throw configurationError("database_url_invalid");
   }
 
   const supportedProtocol = url.protocol === "postgres:" || url.protocol === "postgresql:";
   if (!supportedProtocol || url.hostname === "") {
-    throw configurationError();
+    throw configurationError("database_url_invalid");
   }
   return databaseUrl;
 }
@@ -86,14 +87,14 @@ export async function selectShortLinkBackend(
   try {
     ttlSeconds = validateTtlSeconds(optionalTrimmed(env.URL_SHORTENER_TTL_SECONDS));
   } catch {
-    throw configurationError();
+    throw configurationError("ttl_invalid");
   }
 
   let maxActiveLinks: number | undefined;
   try {
     maxActiveLinks = parseMaxActiveLinks(env);
   } catch {
-    throw configurationError();
+    throw configurationError("max_active_links_invalid");
   }
 
   const probeD1 = dependencies?.probeD1 ?? (async (target) => {
@@ -135,8 +136,8 @@ export async function selectShortLinkBackend(
   let store: ShortLinkStore;
   try {
     store = await openPostgres(databaseUrl);
-  } catch {
-    throw configurationError();
+  } catch (error) {
+    throw new StartupFailure(postgresStartupReason(error));
   }
 
   return {
