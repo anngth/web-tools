@@ -2,7 +2,7 @@ import {
   DEFAULT_SEO_TOOL_ID,
   seoToolIdFromPathname,
   toolSeoData,
-} from "../../../app/toolSeoData";
+} from "../../app/toolSeoData";
 
 export const SITE_ORIGIN_PLACEHOLDER = "__SITE_ORIGIN__";
 

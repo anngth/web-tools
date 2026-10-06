@@ -7,15 +7,15 @@ import {
   selectShortLinkBackend,
   type BackendEnvironment,
   type BackendSelection,
-} from "../../../server/short-links/backend-selector.ts";
+} from "./short-links/backend-selector.ts";
 import {
   createCleanupController,
   type CleanupController,
-} from "./cleanup-scheduler";
-import { createJsonLogger, type AppLogger } from "./logger";
-import { createPublicApp } from "./public-app";
-import { parseRateLimitRules, type RateLimitEnvironment } from "./limits-config";
-import { createRateLimiter, resolveClientKey } from "./rate-limiter";
+} from "./http/cleanup-scheduler";
+import { createJsonLogger, type AppLogger } from "./http/logger";
+import { createPublicApp } from "./http/public-app";
+import { parseRateLimitRules, type RateLimitEnvironment } from "./http/limits-config";
+import { createRateLimiter, resolveClientKey } from "./http/rate-limiter";
 
 export const CLEANUP_INTERVAL_MS = 300_000 as const;
 export const SHUTDOWN_TIMEOUT_MS = 10_000 as const;

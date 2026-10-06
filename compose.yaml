@@ -11,8 +11,7 @@ services:
       - "8080"
     environment:
       NODE_ENV: production
-      DATABASE_BACKEND: ${DATABASE_BACKEND:-sqlite}
-      SQLITE_PATH: ${SQLITE_PATH:-/data/url-shortener.sqlite}
+      DATABASE_URL: ${DATABASE_URL:-}
       URL_SHORTENER_TTL_SECONDS: ${URL_SHORTENER_TTL_SECONDS:-2592000}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required}
       D1_GATEWAY_URL: ${D1_GATEWAY_URL:-}
@@ -22,8 +21,6 @@ services:
       RATE_LIMIT_PER_HOUR: ${RATE_LIMIT_PER_HOUR:-60}
       RATE_LIMIT_PER_DAY: ${RATE_LIMIT_PER_DAY:-200}
       MAX_ACTIVE_LINKS: ${MAX_ACTIVE_LINKS:-100000}
-    volumes:
-      - url-shortener-data:/data
     read_only: true
     tmpfs:
       - /tmp:size=16m,mode=1777
@@ -37,6 +34,3 @@ services:
       timeout: 3s
       start_period: 10s
       retries: 3
-
-volumes:
-  url-shortener-data:

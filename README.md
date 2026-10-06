@@ -22,35 +22,30 @@ A React toolbox with a TOTP generator and a persistent URL shortener. Production
 
 - Creates generated or custom short links with public statistics
 - Enforces one server-controlled lifetime for every link
-- Uses local SQLite or an authenticated Cloudflare D1 gateway selected at startup
+- Tries an authenticated Cloudflare D1 gateway once at startup and uses Postgres when D1 is unavailable
 - Deletes expired links at startup and on a fixed five-minute schedule
-- Keeps SQLite and D1 as independent datasets; switching backends requires a restart and does not migrate, replicate, or fail over records
+- Keeps D1 and Postgres as independent datasets; a restart is required to select the other dataset and does not migrate, replicate, dual-write, or fail over records
 
 ## Project Structure
 
-Feature code lives under `src/features/<tool-name>`. Shared app shell and navigation live under `src/app`, global styling lives under `src/styles`, and cross-tool utilities live under `src/shared`.
+Browser tools live under `src/features/<tool-name>`. Shared app shell and navigation live under `src/app`, global styling lives under `src/styles`, and modules used by more than one runtime live under `src/shared`. The Node process lives under `src/server`. The Cloudflare Worker lives under `src/worker`.
 
 ```txt
 src/
   app/
-    layout/
-      AppShell.tsx
-      PageHeader.tsx
-      Sidebar.tsx
-    App.tsx
-    toolRegistry.ts
   features/
     totp/
-      index.ts
-      TotpPage.tsx
-      totp.service.ts
-      totp-url.ts
-      totp.css
-      totp.test.ts
+    url-shortener/          # page, browser API client, browser storage, CSS
   shared/
     clipboard/
-      copyTextToClipboard.ts
-      index.ts
+    short-links/
+  server/
+    main.ts                 # Node entry
+    http/                   # public app, static HTML, health, limits, logger, cleanup
+    short-links/            # startup selection, Postgres store, D1 gateway client
+    README.md               # operations runbook
+  worker/
+    short-links/
   styles/
     index.css
     layout.css
@@ -79,13 +74,11 @@ npm run dev
 ```
 
 ```bash
-DATABASE_BACKEND=sqlite \
-SQLITE_PATH=./url-shortener.sqlite \
 URL_SHORTENER_TTL_SECONDS=2592000 \
 npm run dev:server
 ```
 
-Vite proxies `/api` and `/s` to the Node process. Local development may derive short links from the request origin; production must always set `PUBLIC_BASE_URL`. Query the API process directly at `http://127.0.0.1:8080/healthz` for local readiness.
+Startup tries D1 when both `D1_GATEWAY_URL` and `D1_GATEWAY_TOKEN` are set and the gateway health probe succeeds. Otherwise it uses `DATABASE_URL`, a `postgres:` or `postgresql:` URL such as `postgres://localhost:5432/web_tools`. The two datasets are independent. Vite proxies `/api` and `/s` to the Node process. Local development may derive short links from the request origin; production must always set `PUBLIC_BASE_URL`. Query the API process directly at `http://127.0.0.1:8080/healthz` for local readiness.
 
 ## Production Build
 
@@ -94,14 +87,14 @@ npm run build
 npm run build:server
 ```
 
-Compose requires the public HTTP(S) origin and starts the one hardened service with the default 30-day TTL and SQLite volume:
+Compose requires the public HTTP(S) origin and starts the one hardened service with the default 30-day TTL. It passes `DATABASE_URL` through and does not mount a data volume:
 
 ```bash
 PUBLIC_BASE_URL=https://tools.example.com docker compose up --build -d
 PUBLIC_BASE_URL=https://tools.example.com docker compose ps
 ```
 
-`PUBLIC_BASE_URL` must be an absolute HTTP(S) origin with no credentials, path, query, or fragment. `URL_SHORTENER_TTL_SECONDS` defaults to `2592000` and must be a positive integer. Invalid production URL, TTL, backend, SQLite path, D1 settings, or `TRUST_PROXY` values fail startup before the service listens.
+`PUBLIC_BASE_URL` must be an absolute HTTP(S) origin with no credentials, path, query, or fragment. `URL_SHORTENER_TTL_SECONDS` defaults to `2592000` and must be a positive integer. Invalid production URL, TTL, D1 settings, `DATABASE_URL`, or `TRUST_PROXY` values fail startup before the service listens. A failed start logs `server_start_failed` with `reason: "invalid_configuration_or_startup_failure"` and does not include driver or gateway detail.
 
 Abuse limits are configurable through environment variables (all optional; a value of `0` disables that limit):
 
@@ -116,7 +109,7 @@ At least one `RATE_LIMIT_PER_*` window must stay enabled. Invalid (non-integer o
 
 The service is ready only after configuration validation, backend construction, schema initialization, and startup cleanup. Check it inside the Compose network with `GET /healthz`; Docker also runs this readiness check. Cleanup then runs every fixed `300000` ms without overlap. SIGTERM/SIGINT stops new work, stops scheduling, drains in-flight requests and cleanup for at most 10 seconds, closes the backend once, and exits.
 
-See the [backend operations runbook](src/features/url-shortener/backend/README.md) for logs, SQLite backup and restore, D1 deployment and token rotation, smoke tests, incident events, and security limitations.
+See the [server operations runbook](src/server/README.md) for logs, D1 deployment and token rotation, Postgres backup ownership, smoke tests, incident events, and security limitations.
 
 ## SEO
 

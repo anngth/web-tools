@@ -1,8 +1,8 @@
 import type { Context } from "hono";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { CleanupController } from "./cleanup-scheduler";
-import type { AppLogger } from "./logger";
-import type { ShortLinkBackend } from "../../../shared/short-links/short-link-backend.ts";
+import type { CleanupController } from "./http/cleanup-scheduler";
+import type { AppLogger } from "./http/logger";
+import type { ShortLinkBackend } from "../shared/short-links/short-link-backend.ts";
 import {
   CLEANUP_INTERVAL_MS,
   SHUTDOWN_TIMEOUT_MS,
@@ -10,7 +10,7 @@ import {
   startDockerServer,
   type DockerServerDependencies,
   type RuntimeListener,
-} from "./docker-server";
+} from "./main";
 
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;

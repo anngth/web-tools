@@ -14,5 +14,5 @@
     "strict": true
   },
   "include": ["src"],
-  "exclude": ["src/features/url-shortener/backend", "src/server", "src/worker"]
+  "exclude": ["src/server", "src/worker"]
 }

@@ -1,4 +1,4 @@
-import { parseMaxActiveLinks, type MaxActiveLinksEnvironment } from "../../features/url-shortener/backend/limits-config.ts";
+import { parseMaxActiveLinks, type MaxActiveLinksEnvironment } from "../http/limits-config.ts";
 import { LocalShortLinkBackend } from "../../shared/short-links/local-backend.ts";
 import type { ShortLinkBackend, ShortLinkStore } from "../../shared/short-links/short-link-backend.ts";
 import { validateTtlSeconds } from "../../shared/short-links/validation.ts";

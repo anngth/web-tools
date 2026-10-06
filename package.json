@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:server": "tsx watch src/features/url-shortener/backend/docker-server.ts",
+    "dev:server": "tsx watch src/server/main.ts",
     "build": "vite build",
-    "build:server": "esbuild src/features/url-shortener/backend/docker-server.ts --bundle --platform=node --format=esm --outfile=dist-server/server.js",
+    "build:server": "esbuild src/server/main.ts --bundle --platform=node --format=esm --outfile=dist-server/server.js",
     "build:docker": "npm run build && npm run build:server",
     "preview": "vite preview",
     "test": "vitest --run --config vitest.node.config.ts",

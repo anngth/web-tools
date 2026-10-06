@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppLogger } from "./logger";
-import type { ShortLinkBackend } from "../../../shared/short-links/short-link-backend.ts";
+import type { ShortLinkBackend } from "../../shared/short-links/short-link-backend.ts";
 import { createCleanupController } from "./cleanup-scheduler";
 
 const START = new Date("2026-07-12T00:00:00.000Z");
