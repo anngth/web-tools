@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   createFixedWindowLimiter,
+  createRateLimiter,
   resolveClientKey,
 } from "./rate-limiter";
 
@@ -107,6 +108,146 @@ describe("createFixedWindowLimiter", () => {
       expect(limiter.consume("client-0").allowed).toBe(true);
     }
     expect(limiter.consume("client-0").allowed).toBe(false);
+  });
+});
+
+describe("createRateLimiter", () => {
+  const MINUTE = 60_000;
+  const HOUR = 3_600_000;
+  const DAY = 86_400_000;
+
+  function createLayeredLimiter(now: () => number) {
+    return createRateLimiter({
+      rules: [
+        { limit: 3, windowMs: MINUTE },
+        { limit: 5, windowMs: HOUR },
+        { limit: 7, windowMs: DAY },
+      ],
+      maxKeys: 100,
+      now,
+    });
+  }
+
+  it("blocks on the minute window and reports its reset", () => {
+    const limiter = createLayeredLimiter(() => 0);
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      expect(limiter.consume("client").allowed).toBe(true);
+    }
+
+    expect(limiter.consume("client")).toEqual({
+      allowed: false,
+      retryAfterSeconds: 60,
+    });
+  });
+
+  it("blocks on the hour window after minute windows reset", () => {
+    let time = 0;
+    const limiter = createLayeredLimiter(() => time);
+
+    for (let attempt = 0; attempt < 3; attempt += 1) limiter.consume("client");
+    time = MINUTE;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      expect(limiter.consume("client").allowed).toBe(true);
+    }
+
+    time = 2 * MINUTE;
+    expect(limiter.consume("client")).toEqual({
+      allowed: false,
+      retryAfterSeconds: (HOUR - 2 * MINUTE) / 1_000,
+    });
+
+    time = HOUR;
+    expect(limiter.consume("client").allowed).toBe(true);
+  });
+
+  it("blocks on the day window after hour windows reset", () => {
+    let time = 0;
+    const limiter = createLayeredLimiter(() => time);
+
+    for (let hour = 0; hour < 2; hour += 1) {
+      time = hour * HOUR;
+      const attempts = hour === 0 ? 5 : 2;
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
+        time += attempt * MINUTE;
+        expect(limiter.consume("client").allowed).toBe(true);
+      }
+    }
+
+    time = 2 * HOUR;
+    expect(limiter.consume("client")).toEqual({
+      allowed: false,
+      retryAfterSeconds: (DAY - 2 * HOUR) / 1_000,
+    });
+
+    time = DAY;
+    expect(limiter.consume("client").allowed).toBe(true);
+  });
+
+  it("reports the longest wait when several windows are exhausted", () => {
+    const limiter = createRateLimiter({
+      rules: [
+        { limit: 1, windowMs: MINUTE },
+        { limit: 1, windowMs: HOUR },
+      ],
+      maxKeys: 10,
+      now: () => 0,
+    });
+
+    limiter.consume("client");
+
+    expect(limiter.consume("client")).toEqual({
+      allowed: false,
+      retryAfterSeconds: HOUR / 1_000,
+    });
+  });
+
+  it("does not count blocked attempts against the longer windows", () => {
+    let time = 0;
+    const limiter = createLayeredLimiter(() => time);
+
+    for (let attempt = 0; attempt < 3; attempt += 1) limiter.consume("client");
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      expect(limiter.consume("client").allowed).toBe(false);
+    }
+
+    time = MINUTE;
+    expect(limiter.consume("client").allowed).toBe(true);
+    expect(limiter.consume("client").allowed).toBe(true);
+    expect(limiter.consume("client").allowed).toBe(false);
+  });
+
+  it("tracks clients independently", () => {
+    const limiter = createLayeredLimiter(() => 0);
+
+    for (let attempt = 0; attempt < 3; attempt += 1) limiter.consume("a");
+
+    expect(limiter.consume("a").allowed).toBe(false);
+    expect(limiter.consume("b").allowed).toBe(true);
+  });
+
+  it("keeps a client with an active long window after its minute window expires", () => {
+    let time = 0;
+    const limiter = createLayeredLimiter(() => time);
+
+    for (let attempt = 0; attempt < 3; attempt += 1) limiter.consume("client");
+    time = MINUTE;
+    limiter.consume("other");
+
+    limiter.consume("client");
+    limiter.consume("client");
+    time = 2 * MINUTE;
+    expect(limiter.consume("client").allowed).toBe(false);
+  });
+
+  it("rejects an empty or invalid rule set", () => {
+    expect(() => createRateLimiter({ rules: [], maxKeys: 1 })).toThrow();
+    expect(() =>
+      createRateLimiter({ rules: [{ limit: 0, windowMs: 1 }], maxKeys: 1 }),
+    ).toThrow();
+    expect(() =>
+      createRateLimiter({ rules: [{ limit: 1, windowMs: 0 }], maxKeys: 1 }),
+    ).toThrow();
   });
 });
 

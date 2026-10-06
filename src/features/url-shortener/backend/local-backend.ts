@@ -31,16 +31,37 @@ export class LocalShortLinkBackend implements ShortLinkBackend {
   constructor(
     private readonly store: ShortLinkStore,
     private readonly ttlSeconds: number,
+    private readonly maxActiveLinks?: number,
   ) {}
 
-  async create(
+  /** Serializes creations so the cap check and insert are one critical section. */
+  private createQueue: Promise<unknown> = Promise.resolve();
+
+  create(
     input: CreateShortLinkInput,
     now = new Date(),
+  ): Promise<ShortLinkPublic> {
+    const result = this.createQueue.then(() => this.createSerialized(input, now));
+    this.createQueue = result.catch(() => undefined);
+    return result;
+  }
+
+  private async createSerialized(
+    input: CreateShortLinkInput,
+    now: Date,
   ): Promise<ShortLinkPublic> {
     const destinationUrl = validateDestinationUrl(input.destinationUrl);
     const customAlias = validateCustomAlias(input.customAlias);
     const createdAt = now.toISOString();
     const expiresAt = computeExpiresAt(now, this.ttlSeconds);
+
+    if (
+      this.maxActiveLinks !== undefined &&
+      (await this.store.countActive(createdAt)) >= this.maxActiveLinks
+    ) {
+      throw new ShortLinkError("capacity");
+    }
+
     const attempts = customAlias === undefined ? GENERATED_SLUG_ATTEMPTS : 1;
 
     for (let attempt = 0; attempt < attempts; attempt += 1) {

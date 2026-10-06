@@ -37,7 +37,7 @@ const ERROR_BY_STATUS: Record<
   },
   429: {
     code: "rate_limited",
-    message: "Too many links were created. Wait a moment, then try again.",
+    message: "Too many links were created from your connection. Wait a while, then try again.",
   },
   500: {
     code: "internal_error",

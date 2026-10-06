@@ -1,10 +1,11 @@
 import { validateTtlSeconds } from "../url-shortener.validation";
+import { parseMaxActiveLinks, type MaxActiveLinksEnvironment } from "./limits-config";
 import { D1GatewayClient } from "./d1-gateway-client";
 import { LocalShortLinkBackend } from "./local-backend";
 import type { ShortLinkBackend } from "./short-link-backend";
 import { SqliteShortLinkStore } from "./sqlite-store";
 
-export interface BackendEnvironment {
+export interface BackendEnvironment extends MaxActiveLinksEnvironment {
   DATABASE_BACKEND?: string;
   SQLITE_PATH?: string;
   D1_GATEWAY_URL?: string;
@@ -16,6 +17,8 @@ export interface BackendSelection {
   backend: ShortLinkBackend;
   backendType: "sqlite" | "d1";
   ttlSeconds: number;
+  /** Cap on simultaneously active links; `undefined` means unlimited. */
+  maxActiveLinks: number | undefined;
 }
 
 function trimmed(value: string | undefined): string | undefined {
@@ -53,13 +56,20 @@ export function createShortLinkBackend(env: BackendEnvironment): BackendSelectio
     throw configurationError();
   }
 
+  const maxActiveLinks = parseMaxActiveLinks(env);
+
   if (backendType === "sqlite") {
     const path = trimmed(env.SQLITE_PATH);
     if (!path) throw configurationError();
     return {
-      backend: new LocalShortLinkBackend(new SqliteShortLinkStore(path), ttlSeconds),
+      backend: new LocalShortLinkBackend(
+        new SqliteShortLinkStore(path),
+        ttlSeconds,
+        maxActiveLinks,
+      ),
       backendType,
       ttlSeconds,
+      maxActiveLinks,
     };
   }
 
@@ -68,9 +78,15 @@ export function createShortLinkBackend(env: BackendEnvironment): BackendSelectio
     const token = trimmed(env.D1_GATEWAY_TOKEN);
     if (!token) throw configurationError();
     return {
-      backend: new D1GatewayClient({ baseUrl, token, ttlSeconds }),
+      backend: new D1GatewayClient({
+        baseUrl,
+        token,
+        ttlSeconds,
+        maxActiveLinks,
+      }),
       backendType,
       ttlSeconds,
+      maxActiveLinks,
     };
   }
 

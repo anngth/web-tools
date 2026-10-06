@@ -14,17 +14,17 @@ import {
 } from "./cleanup-scheduler";
 import { createJsonLogger, type AppLogger } from "./logger";
 import { createPublicApp } from "./public-app";
-import {
-  createFixedWindowLimiter,
-  resolveClientKey,
-} from "./rate-limiter";
+import { parseRateLimitRules, type RateLimitEnvironment } from "./limits-config";
+import { createRateLimiter, resolveClientKey } from "./rate-limiter";
 
 export const CLEANUP_INTERVAL_MS = 300_000 as const;
 export const SHUTDOWN_TIMEOUT_MS = 10_000 as const;
 const PORT = 8080 as const;
 const HOSTNAME = "0.0.0.0";
 
-interface DockerServerEnvironment extends BackendEnvironment {
+interface DockerServerEnvironment
+  extends BackendEnvironment,
+    RateLimitEnvironment {
   NODE_ENV?: string;
   PUBLIC_BASE_URL?: string;
   TRUST_PROXY?: string;
@@ -44,7 +44,7 @@ export interface DockerServerDependencies {
     logger: AppLogger;
   }): CleanupController;
   createApp: typeof createPublicApp;
-  createLimiter: typeof createFixedWindowLimiter;
+  createLimiter: typeof createRateLimiter;
   listen(
     options: {
       fetch: ReturnType<typeof createPublicApp>["fetch"];
@@ -69,7 +69,7 @@ const defaultDependencies: DockerServerDependencies = {
   createBackend: createShortLinkBackend,
   createCleanup: createCleanupController,
   createApp: createPublicApp,
-  createLimiter: createFixedWindowLimiter,
+  createLimiter: createRateLimiter,
   listen(options, onListening) {
     return serve(options, onListening) as RuntimeListener;
   },
@@ -110,14 +110,14 @@ export async function startDockerServer(options: {
   const dependencies = options.dependencies ?? defaultDependencies;
   const publicBaseUrl = validatePublicBaseUrl(env.PUBLIC_BASE_URL, env.NODE_ENV);
   const trustProxy = parseTrustProxy(env.TRUST_PROXY);
+  const rateLimitRules = parseRateLimitRules(env);
   const selection = dependencies.createBackend(env);
   const cleanup = dependencies.createCleanup({
     backend: selection.backend,
     logger: dependencies.logger,
   });
   const limiter = dependencies.createLimiter({
-    limit: 10,
-    windowMs: 60_000,
+    rules: rateLimitRules,
     maxKeys: 10_000,
   });
   const app = dependencies.createApp({

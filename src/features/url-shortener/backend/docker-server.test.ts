@@ -52,7 +52,7 @@ function createHarness(overrides: Partial<DockerServerDependencies> = {}) {
   const signalHandlers = new Map<NodeJS.Signals, () => void>();
 
   const dependencies: DockerServerDependencies = {
-    createBackend: vi.fn(() => ({ backend, backendType: "sqlite", ttlSeconds: 60 })),
+    createBackend: vi.fn(() => ({ backend, backendType: "sqlite", ttlSeconds: 60, maxActiveLinks: undefined })),
     createCleanup: vi.fn(() => cleanup),
     createApp: vi.fn(() => ({ fetch: vi.fn() }) as never),
     createLimiter: vi.fn(() => ({
@@ -116,15 +116,59 @@ describe("startDockerServer configuration and startup", () => {
     ["missing PUBLIC_BASE_URL", { ...VALID_ENV, PUBLIC_BASE_URL: undefined }],
     ["invalid PUBLIC_BASE_URL", { ...VALID_ENV, PUBLIC_BASE_URL: "https://sho.rt/path" }],
     ["invalid TRUST_PROXY", { ...VALID_ENV, TRUST_PROXY: "yes" }],
+    ["invalid RATE_LIMIT_PER_HOUR", { ...VALID_ENV, RATE_LIMIT_PER_HOUR: "lots" }],
+    ["all rate limit windows disabled", {
+      ...VALID_ENV,
+      RATE_LIMIT_PER_MINUTE: "0",
+      RATE_LIMIT_PER_HOUR: "0",
+      RATE_LIMIT_PER_DAY: "0",
+    }],
   ])("rejects %s before constructing a backend or listening", async (_name, env) => {
     const harness = createHarness();
 
     await expect(startDockerServer({ env, dependencies: harness.dependencies })).rejects.toThrow(
-      /configuration|PUBLIC_BASE_URL|TRUST_PROXY/,
+      /configuration|PUBLIC_BASE_URL|TRUST_PROXY|RATE_LIMIT/,
     );
 
     expect(harness.dependencies.createBackend).not.toHaveBeenCalled();
     expect(harness.dependencies.listen).not.toHaveBeenCalled();
+  });
+
+  it("creates the limiter with default per-minute, per-hour, and per-day quotas", async () => {
+    const harness = createHarness();
+
+    await startDockerServer({ env: VALID_ENV, dependencies: harness.dependencies });
+
+    expect(harness.dependencies.createLimiter).toHaveBeenCalledWith({
+      rules: [
+        { limit: 10, windowMs: 60_000 },
+        { limit: 60, windowMs: 3_600_000 },
+        { limit: 200, windowMs: 86_400_000 },
+      ],
+      maxKeys: 10_000,
+    });
+  });
+
+  it("configures limiter quotas from the environment", async () => {
+    const harness = createHarness();
+
+    await startDockerServer({
+      env: {
+        ...VALID_ENV,
+        RATE_LIMIT_PER_MINUTE: "2",
+        RATE_LIMIT_PER_HOUR: "0",
+        RATE_LIMIT_PER_DAY: "25",
+      },
+      dependencies: harness.dependencies,
+    });
+
+    expect(harness.dependencies.createLimiter).toHaveBeenCalledWith({
+      rules: [
+        { limit: 2, windowMs: 60_000 },
+        { limit: 25, windowMs: 86_400_000 },
+      ],
+      maxKeys: 10_000,
+    });
   });
 
   it("awaits startup cleanup before scheduling, listening, or logging readiness", async () => {

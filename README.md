@@ -103,6 +103,17 @@ PUBLIC_BASE_URL=https://tools.example.com docker compose ps
 
 `PUBLIC_BASE_URL` must be an absolute HTTP(S) origin with no credentials, path, query, or fragment. `URL_SHORTENER_TTL_SECONDS` defaults to `2592000` and must be a positive integer. Invalid production URL, TTL, backend, SQLite path, D1 settings, or `TRUST_PROXY` values fail startup before the service listens.
 
+Abuse limits are configurable through environment variables (all optional; a value of `0` disables that limit):
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `RATE_LIMIT_PER_MINUTE` | `10` | Link creations accepted per client IP per minute |
+| `RATE_LIMIT_PER_HOUR` | `60` | Link creations accepted per client IP per hour |
+| `RATE_LIMIT_PER_DAY` | `200` | Link creations accepted per client IP per day |
+| `MAX_ACTIVE_LINKS` | `100000` | Maximum number of unexpired links; new creations get `503 capacity_reached` at the cap |
+
+At least one `RATE_LIMIT_PER_*` window must stay enabled. Invalid (non-integer or negative) values fail startup before the service listens.
+
 The service is ready only after configuration validation, backend construction, schema initialization, and startup cleanup. Check it inside the Compose network with `GET /healthz`; Docker also runs this readiness check. Cleanup then runs every fixed `300000` ms without overlap. SIGTERM/SIGINT stops new work, stops scheduling, drains in-flight requests and cleanup for at most 10 seconds, closes the backend once, and exits.
 
 See the [backend operations runbook](src/features/url-shortener/backend/README.md) for logs, SQLite backup and restore, D1 deployment and token rotation, smoke tests, incident events, and security limitations.

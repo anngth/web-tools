@@ -98,4 +98,13 @@ export class D1ShortLinkStore implements ShortLinkStore {
 
     return result.meta.changes;
   }
+
+  async countActive(now: string): Promise<number> {
+    const row = await this.database
+      .prepare("SELECT COUNT(*) AS count FROM short_links WHERE expires_at > ?")
+      .bind(now)
+      .first<{ count: number }>();
+
+    return row?.count ?? 0;
+  }
 }

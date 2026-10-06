@@ -78,6 +78,33 @@ describe("D1GatewayClient", () => {
     expect(JSON.parse(String(fetchMock.mock.calls[3][1]?.body))).toEqual({ now: NOW.toISOString() });
   });
 
+  it("sends the active link cap only when configured", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(LINK, 201));
+    const client = new D1GatewayClient({
+      baseUrl: "https://gateway.example.test/root/",
+      token: "very-secret-token",
+      ttlSeconds: 300,
+      maxActiveLinks: 1_000,
+      fetch: fetchMock,
+    });
+
+    await client.create({ destinationUrl: LINK.destinationUrl }, NOW);
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({
+      ttlSeconds: 300,
+      maxActiveLinks: 1_000,
+    });
+  });
+
+  it("maps a 507 capacity response to a typed capacity error", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ error: "capacity_reached" }, 507));
+    const client = makeClient(fetchMock);
+
+    await expect(client.create({ destinationUrl: LINK.destinationUrl }, NOW)).rejects.toMatchObject({ code: "capacity" });
+  });
+
   it("uses the configured timeout and never forwards an input expiration", async () => {
     const timeout = vi.spyOn(AbortSignal, "timeout");
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(LINK, 201));

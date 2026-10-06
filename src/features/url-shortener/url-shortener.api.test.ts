@@ -133,7 +133,7 @@ describe("url shortener API", () => {
     [404, "not_found", "This short link is missing or has expired."],
     [409, "alias_collision", "That custom alias is already in use. Choose another alias."],
     [413, "invalid_request", "The request is too large. Shorten the destination URL or alias, then try again."],
-    [429, "rate_limited", "Too many links were created. Wait a moment, then try again."],
+    [429, "rate_limited", "Too many links were created from your connection. Wait a while, then try again."],
     [500, "internal_error", "The short-link service could not complete the request. Try again."],
     [503, "service_unavailable", "The short-link service is temporarily unavailable. Try again."],
   ])("maps %i errors to a friendly typed error", async (status, code, message) => {

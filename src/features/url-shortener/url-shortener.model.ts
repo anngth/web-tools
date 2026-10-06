@@ -32,6 +32,7 @@ export interface CreatedShortLink extends ShortLinkStats {
 export type ShortLinkErrorCode =
   | "validation"
   | "alias_collision"
+  | "capacity"
   | "unavailable";
 
 export class ShortLinkError extends Error {

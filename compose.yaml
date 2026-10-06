@@ -18,6 +18,10 @@ services:
       D1_GATEWAY_URL: ${D1_GATEWAY_URL:-}
       D1_GATEWAY_TOKEN: ${D1_GATEWAY_TOKEN:-}
       TRUST_PROXY: ${TRUST_PROXY:-false}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-10}
+      RATE_LIMIT_PER_HOUR: ${RATE_LIMIT_PER_HOUR:-60}
+      RATE_LIMIT_PER_DAY: ${RATE_LIMIT_PER_DAY:-200}
+      MAX_ACTIVE_LINKS: ${MAX_ACTIVE_LINKS:-100000}
     volumes:
       - url-shortener-data:/data
     read_only: true

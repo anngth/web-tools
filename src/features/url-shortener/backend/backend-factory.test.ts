@@ -28,6 +28,37 @@ describe("createShortLinkBackend", () => {
     expect(selection.backend).toBeInstanceOf(D1GatewayClient);
   });
 
+  it("applies the default active link cap and allows overriding or disabling it", async () => {
+    const base = { DATABASE_BACKEND: "sqlite", SQLITE_PATH: ":memory:" };
+    const defaults = createShortLinkBackend(base);
+    const custom = createShortLinkBackend({ ...base, MAX_ACTIVE_LINKS: " 42 " });
+    const unlimited = createShortLinkBackend({ ...base, MAX_ACTIVE_LINKS: "0" });
+
+    expect(defaults.maxActiveLinks).toBe(100_000);
+    expect(custom.maxActiveLinks).toBe(42);
+    expect(unlimited.maxActiveLinks).toBeUndefined();
+    await Promise.all([defaults, custom, unlimited].map((s) => s.backend.close?.()));
+  });
+
+  it("rejects an invalid active link cap before opening the database", () => {
+    expect(() => createShortLinkBackend({
+      DATABASE_BACKEND: "sqlite",
+      SQLITE_PATH: ":memory:",
+      MAX_ACTIVE_LINKS: "many",
+    })).toThrow("MAX_ACTIVE_LINKS configuration is invalid");
+  });
+
+  it("passes the active link cap to the D1 selection", () => {
+    const selection = createShortLinkBackend({
+      DATABASE_BACKEND: "d1",
+      D1_GATEWAY_URL: "https://gateway.example.test/",
+      D1_GATEWAY_TOKEN: "token",
+      MAX_ACTIVE_LINKS: "7",
+    });
+
+    expect(selection.maxActiveLinks).toBe(7);
+  });
+
   it.each(["", " ", "0", "-1", "1.5", "10e2", "NaN", "9007199254740992"])(
     "rejects invalid TTL %j",
     (ttl) => {

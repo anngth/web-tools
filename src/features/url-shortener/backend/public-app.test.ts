@@ -198,6 +198,7 @@ describe("createPublicApp", () => {
   it.each([
     ["validation", 400, "invalid_request"],
     ["alias_collision", 409, "alias_collision"],
+    ["capacity", 503, "capacity_reached"],
     ["unavailable", 503, "service_unavailable"],
   ] as const)(
     "maps the typed %s create error to %i",

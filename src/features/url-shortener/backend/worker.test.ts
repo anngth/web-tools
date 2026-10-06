@@ -140,6 +140,42 @@ describe("authenticated D1 Worker gateway", () => {
     expect(await collision.json()).toEqual({ error: "alias_collision" });
   });
 
+  it("enforces the optional active link cap with a 507 capacity response", async () => {
+    const createWithCap = (alias: string) =>
+      jsonRequest("/internal/links", {
+        input: { destinationUrl: "https://example.com/cap", customAlias: alias },
+        now: "2026-07-12T00:00:00.000Z",
+        ttlSeconds: 300,
+        maxActiveLinks: 1,
+      });
+
+    expect((await createWithCap("cap-one")).status).toBe(201);
+
+    const rejected = await createWithCap("cap-two");
+    expect(rejected.status).toBe(507);
+    expect(await rejected.json()).toEqual({ error: "capacity_reached" });
+
+    const afterExpiry = await jsonRequest("/internal/links", {
+      input: { destinationUrl: "https://example.com/cap", customAlias: "cap-three" },
+      now: "2026-07-12T00:05:00.000Z",
+      ttlSeconds: 300,
+      maxActiveLinks: 1,
+    });
+    expect(afterExpiry.status).toBe(201);
+  });
+
+  it.each([0, -1, 1.5, "10", null])("validates maxActiveLinks %j", async (maxActiveLinks) => {
+    const response = await jsonRequest("/internal/links", {
+      input: { destinationUrl: "https://example.com" },
+      now: "2026-07-12T00:00:00.000Z",
+      ttlSeconds: 300,
+      maxActiveLinks,
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "invalid_request" });
+  });
+
   it.each([0, -1, 1.5, "300", null])("validates ttlSeconds using domain rules", async (ttlSeconds) => {
     const response = await jsonRequest("/internal/links", {
       input: { destinationUrl: "https://example.com" },

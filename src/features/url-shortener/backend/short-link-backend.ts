@@ -14,6 +14,8 @@ export interface ShortLinkStore {
     clickedAt: string,
   ): Promise<boolean>;
   deleteExpired(now: string): Promise<number>;
+  /** Counts records whose `expiresAt` is strictly after `now`. */
+  countActive(now: string): Promise<number>;
   close?(): Promise<void> | void;
 }
 

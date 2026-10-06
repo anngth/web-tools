@@ -9,6 +9,8 @@ class MemoryShortLinkStore implements ShortLinkStore {
   readonly records = new Map<string, ShortLinkRecord>();
   deleteCalls: string[] = [];
   insertAttempts = 0;
+  countCalls = 0;
+  insertDelay?: Promise<void>;
   collisionsRemaining = 0;
   incrementResult: boolean | undefined;
   beforeIncrement?: () => void;
@@ -20,6 +22,7 @@ class MemoryShortLinkStore implements ShortLinkStore {
 
   async insert(record: ShortLinkRecord): Promise<boolean> {
     this.insertAttempts += 1;
+    await this.insertDelay;
     if (this.collisionsRemaining > 0) {
       this.collisionsRemaining -= 1;
       return false;
@@ -58,6 +61,12 @@ class MemoryShortLinkStore implements ShortLinkStore {
       }
     }
     return deleted;
+  }
+
+  async countActive(now: string): Promise<number> {
+    this.countCalls += 1;
+    return [...this.records.values()].filter((record) => record.expiresAt > now)
+      .length;
   }
 
   close(): void {
@@ -144,6 +153,97 @@ describe("LocalShortLinkBackend", () => {
     );
 
     expect(created.slug).toMatch(/^[2-9a-hjkmnp-z]{7}$/);
+  });
+
+  describe("active link cap", () => {
+    it("rejects creation with a typed capacity error once the cap is reached", async () => {
+      const store = new MemoryShortLinkStore();
+      const backend = new LocalShortLinkBackend(store, 300, 2);
+      await backend.create({ destinationUrl: "https://example.com/1" }, createdAt);
+      await backend.create({ destinationUrl: "https://example.com/2" }, createdAt);
+
+      const result = backend.create(
+        { destinationUrl: "https://example.com/3" },
+        createdAt,
+      );
+
+      await expect(result).rejects.toBeInstanceOf(ShortLinkError);
+      await expect(result).rejects.toMatchObject({ code: "capacity" });
+      expect(store.records.size).toBe(2);
+    });
+
+    it("does not count expired links against the cap", async () => {
+      const store = new MemoryShortLinkStore();
+      store.records.set(
+        "old",
+        record({ slug: "old", expiresAt: "2026-07-11T23:59:59.000Z" }),
+      );
+      const backend = new LocalShortLinkBackend(store, 300, 1);
+
+      await expect(
+        backend.create({ destinationUrl: "https://example.com/new" }, createdAt),
+      ).resolves.toMatchObject({ destinationUrl: "https://example.com/new" });
+    });
+
+    it("reports validation errors before capacity and without touching the store", async () => {
+      const store = new MemoryShortLinkStore();
+      store.records.set("docs", record());
+      const backend = new LocalShortLinkBackend(store, 300, 1);
+
+      await expect(
+        backend.create({ destinationUrl: "ftp://example.com" }, createdAt),
+      ).rejects.toMatchObject({ code: "validation" });
+      expect(store.countCalls).toBe(0);
+    });
+
+    it("never exceeds the cap under concurrent creations", async () => {
+      const store = new MemoryShortLinkStore();
+      let release!: () => void;
+      store.insertDelay = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const backend = new LocalShortLinkBackend(store, 300, 3);
+
+      const results = Promise.allSettled(
+        Array.from({ length: 10 }, (_value, index) =>
+          backend.create(
+            { destinationUrl: `https://example.com/${index}` },
+            createdAt,
+          ),
+        ),
+      );
+      release();
+      const settled = await results;
+
+      expect(settled.filter((r) => r.status === "fulfilled")).toHaveLength(3);
+      expect(
+        settled.filter(
+          (r) => r.status === "rejected" && r.reason.code === "capacity",
+        ),
+      ).toHaveLength(7);
+      expect(store.records.size).toBe(3);
+    });
+
+    it("keeps serving after a failed creation", async () => {
+      const store = new MemoryShortLinkStore();
+      const backend = new LocalShortLinkBackend(store, 300, 5);
+
+      await expect(
+        backend.create({ destinationUrl: "ftp://bad" }, createdAt),
+      ).rejects.toBeInstanceOf(ShortLinkError);
+      await expect(
+        backend.create({ destinationUrl: "https://example.com/ok" }, createdAt),
+      ).resolves.toBeDefined();
+    });
+
+    it("skips the count entirely when no cap is configured", async () => {
+      const store = new MemoryShortLinkStore();
+      const backend = new LocalShortLinkBackend(store, 300);
+
+      await backend.create({ destinationUrl: "https://example.com/1" }, createdAt);
+
+      expect(store.countCalls).toBe(0);
+    });
   });
 
   it("retries generated slug collisions up to eight total attempts", async () => {

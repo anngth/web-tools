@@ -170,6 +170,7 @@ export class D1GatewayClient implements ShortLinkBackend {
   private readonly baseUrl: URL;
   private readonly token: string;
   private readonly ttlSeconds: number;
+  private readonly maxActiveLinks: number | undefined;
   private readonly fetchImpl: typeof fetch;
   private readonly timeoutMs: number;
 
@@ -177,12 +178,14 @@ export class D1GatewayClient implements ShortLinkBackend {
     baseUrl: string;
     token: string;
     ttlSeconds: number;
+    maxActiveLinks?: number;
     fetch?: typeof fetch;
     timeoutMs?: number;
   }) {
     this.baseUrl = safeBaseUrl(options.baseUrl);
     this.token = options.token;
     this.ttlSeconds = options.ttlSeconds;
+    this.maxActiveLinks = options.maxActiveLinks;
     this.fetchImpl = options.fetch ?? fetch;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
@@ -192,9 +195,15 @@ export class D1GatewayClient implements ShortLinkBackend {
     if (input.customAlias !== undefined) safeInput.customAlias = input.customAlias;
     const response = await this.request("internal/links", {
       method: "POST",
-      body: JSON.stringify({ input: safeInput, now: now.toISOString(), ttlSeconds: this.ttlSeconds }),
+      body: JSON.stringify({
+        input: safeInput,
+        now: now.toISOString(),
+        ttlSeconds: this.ttlSeconds,
+        ...(this.maxActiveLinks === undefined ? {} : { maxActiveLinks: this.maxActiveLinks }),
+      }),
     });
     if (response.status === 409) throw new ShortLinkError("alias_collision");
+    if (response.status === 507) throw new ShortLinkError("capacity");
     if (response.status !== 201) throw gatewayError();
     return parseLink(await readLimitedJson(response));
   }

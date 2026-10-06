@@ -8,7 +8,7 @@ import {
   type CreateShortLinkInput,
 } from "../url-shortener.model";
 import type { AppLogger } from "./logger";
-import type { FixedWindowLimiter } from "./rate-limiter";
+import type { RateLimiter } from "./rate-limiter";
 import {
   RequestBodyTooLargeError,
   readLimitedRequestBody,
@@ -25,6 +25,7 @@ type PublicError =
   | "not_found"
   | "alias_collision"
   | "rate_limited"
+  | "capacity_reached"
   | "service_unavailable"
   | "internal_error";
 
@@ -38,7 +39,7 @@ export function createPublicApp(options: {
   backend: ShortLinkBackend;
   publicBaseUrl?: string;
   getClientKey: (context: Context) => string;
-  limiter: FixedWindowLimiter;
+  limiter: RateLimiter;
   logger: AppLogger;
   now?: () => Date;
   staticRoot?: string;
@@ -315,6 +316,9 @@ function mapDomainError(context: Context, error: unknown): Response {
   }
   if (isShortLinkError(error, "alias_collision")) {
     return publicError(context, 409, "alias_collision");
+  }
+  if (isShortLinkError(error, "capacity")) {
+    return publicError(context, 503, "capacity_reached");
   }
   if (isShortLinkError(error, "unavailable")) {
     return publicError(context, 503, "service_unavailable");

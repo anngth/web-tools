@@ -30,6 +30,7 @@ export class SqliteShortLinkStore implements ShortLinkStore {
   private readonly insertStatement;
   private readonly incrementClicksIfActiveStatement;
   private readonly deleteExpiredStatement;
+  private readonly countActiveStatement;
 
   private readonly database: Database.Database;
 
@@ -73,6 +74,9 @@ export class SqliteShortLinkStore implements ShortLinkStore {
     this.deleteExpiredStatement = this.database.prepare(`
       DELETE FROM short_links WHERE expires_at <= ?
     `);
+    this.countActiveStatement = this.database.prepare<[string], { count: number }>(`
+      SELECT COUNT(*) AS count FROM short_links WHERE expires_at > ?
+    `);
   }
 
   async findBySlug(slug: string): Promise<ShortLinkRecord | null> {
@@ -107,6 +111,10 @@ export class SqliteShortLinkStore implements ShortLinkStore {
 
   async deleteExpired(now: string): Promise<number> {
     return Number(this.deleteExpiredStatement.run(now).changes);
+  }
+
+  async countActive(now: string): Promise<number> {
+    return this.countActiveStatement.get(now)?.count ?? 0;
   }
 
   close(): void {

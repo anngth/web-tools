@@ -23,6 +23,7 @@ interface CreatePayload {
   input: CreateShortLinkInput;
   now: string;
   ttlSeconds: number;
+  maxActiveLinks?: number;
 }
 
 function jsonError(error: string) {
@@ -90,10 +91,21 @@ function parseCreatePayload(value: unknown): CreatePayload {
   validateTtlSeconds(String(ttlSeconds));
   const input = asObject(body.input);
 
+  const maxActiveLinks = body.maxActiveLinks;
+  if (
+    maxActiveLinks !== undefined &&
+    (typeof maxActiveLinks !== "number" ||
+      !Number.isSafeInteger(maxActiveLinks) ||
+      maxActiveLinks < 1)
+  ) {
+    invalidRequest();
+  }
+
   return {
     input: input as unknown as CreateShortLinkInput,
     now: parseCanonicalIso(body.now).toISOString(),
     ttlSeconds,
+    ...(maxActiveLinks === undefined ? {} : { maxActiveLinks }),
   };
 }
 
@@ -127,6 +139,7 @@ app.post("/internal/links", async (context) => {
   const backend = new LocalShortLinkBackend(
     new D1ShortLinkStore(context.env.DB),
     payload.ttlSeconds,
+    payload.maxActiveLinks,
   );
   const created = await backend.create(payload.input, new Date(payload.now));
   return context.json(created, 201);
@@ -169,6 +182,9 @@ app.onError((error, context) => {
   }
   if (isShortLinkError(error, "alias_collision")) {
     return context.json(jsonError("alias_collision"), 409);
+  }
+  if (isShortLinkError(error, "capacity")) {
+    return context.json(jsonError("capacity_reached"), 507);
   }
   return context.json(jsonError("internal_error"), 500);
 });

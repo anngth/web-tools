@@ -63,6 +63,20 @@ export function describeShortLinkStoreContract(
       await store.close?.();
     });
 
+    it("counts only records that expire strictly after now", async () => {
+      const store = await createStore();
+      await store.insert(record("active", "2026-07-12T00:05:00.000Z"));
+      await store.insert(record("boundary", "2026-07-12T00:02:00.000Z"));
+      await store.insert(record("expired", "2026-07-12T00:01:00.000Z"));
+
+      await expect(store.countActive("2026-07-12T00:00:00.000Z")).resolves.toBe(3);
+      await expect(store.countActive("2026-07-12T00:01:00.000Z")).resolves.toBe(2);
+      await expect(store.countActive("2026-07-12T00:02:00.000Z")).resolves.toBe(1);
+      await expect(store.countActive("2026-07-12T00:05:00.000Z")).resolves.toBe(0);
+
+      await store.close?.();
+    });
+
     it("does not increment at the exact expiration boundary", async () => {
       const store = await createStore();
       await store.insert(record("docs"));
