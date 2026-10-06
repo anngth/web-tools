@@ -94,7 +94,7 @@ PUBLIC_BASE_URL=https://tools.example.com docker compose up --build -d
 PUBLIC_BASE_URL=https://tools.example.com docker compose ps
 ```
 
-`PUBLIC_BASE_URL` must be an absolute HTTP(S) origin with no credentials, path, query, or fragment. `URL_SHORTENER_TTL_SECONDS` defaults to `2592000` and must be a positive integer. Invalid production URL, TTL, D1 settings, `DATABASE_URL`, or `TRUST_PROXY` values fail startup before the service listens. A failed start logs `server_start_failed` with `reason: "invalid_configuration_or_startup_failure"` and does not include driver or gateway detail.
+`PUBLIC_BASE_URL` must be an absolute HTTP(S) origin with no credentials, path, query, or fragment. `URL_SHORTENER_TTL_SECONDS` defaults to `2592000` and must be a positive integer. Missing or invalid D1 settings select Postgres. Startup fails before the service listens for an invalid `PUBLIC_BASE_URL`, TTL, rate limits, or `TRUST_PROXY`, and for an invalid `DATABASE_URL` only when D1 is not selected. A failed start logs `server_start_failed` with `reason: "invalid_configuration_or_startup_failure"` and does not include driver or gateway detail.
 
 Abuse limits are configurable through environment variables (all optional; a value of `0` disables that limit):
 

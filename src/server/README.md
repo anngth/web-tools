@@ -25,7 +25,7 @@ Production Compose requires an explicit trusted public origin:
 PUBLIC_BASE_URL=https://tools.example.com docker compose up --build -d
 ```
 
-`PUBLIC_BASE_URL` must be an absolute HTTP(S) origin without credentials, path, query, or fragment. It prevents an untrusted request `Host` from determining returned short URLs. `URL_SHORTENER_TTL_SECONDS` defaults to `2592000` (30 days), applies to every created link, and accepts only positive integers. Clients cannot choose a TTL. Invalid URL, TTL, gateway, `DATABASE_URL`, or proxy configuration fails before the process listens.
+`PUBLIC_BASE_URL` must be an absolute HTTP(S) origin without credentials, path, query, or fragment. It prevents an untrusted request `Host` from determining returned short URLs. `URL_SHORTENER_TTL_SECONDS` defaults to `2592000` (30 days), applies to every created link, and accepts only positive integers. Clients cannot choose a TTL. Missing or invalid D1 settings select Postgres. Startup fails before the process listens for an invalid `PUBLIC_BASE_URL`, TTL, rate limits, or `TRUST_PROXY`, and for an invalid `DATABASE_URL` only when D1 is not selected.
 
 Failure logs one JSON line and exits 1:
 
