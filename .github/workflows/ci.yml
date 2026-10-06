@@ -53,4 +53,4 @@ jobs:
           POSTGRES_TEST_URL: postgres://postgres:postgres@localhost:5432/web_tools_test
 
       - name: Build
-        run: npm run build
+        run: npm run fe:build
