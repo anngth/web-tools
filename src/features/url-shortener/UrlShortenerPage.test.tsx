@@ -383,9 +383,11 @@ describe("UrlShortenerPage", () => {
 
     render(<UrlShortenerPage />);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "The saved short link expired or no longer exists. Create a new one.",
-    );
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "The saved short link expired or no longer exists. Create a new one.",
+      );
+    });
     expect(screen.queryByText(createdLink.shortUrl)).not.toBeInTheDocument();
     expect(JSON.parse(sessionStorage.getItem(CREATED_LINKS_STORAGE_KEY)!)).toEqual([]);
   });
@@ -484,18 +486,22 @@ describe("UrlShortenerPage", () => {
       createdLink.destinationUrl,
     );
     await user.click(screen.getByRole("button", { name: "Create short link" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "That custom alias is already in use. Choose another alias.",
-    );
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "That custom alias is already in use. Choose another alias.",
+      );
+    });
 
     createMock.mockResolvedValueOnce(createdLink);
     await user.click(screen.getByRole("button", { name: "Create short link" }));
     await screen.findByText(createdLink.shortUrl);
     copyMock.mockResolvedValueOnce(false);
     await user.click(screen.getByRole("button", { name: "Copy short URL" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Could not copy the short URL. Check clipboard permission and try again.",
-    );
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Could not copy the short URL. Check clipboard permission and try again.",
+      );
+    });
   });
 
   it("limits result controls to copy and refresh", async () => {
