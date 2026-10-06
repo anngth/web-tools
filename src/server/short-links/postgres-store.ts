@@ -57,6 +57,7 @@ export class PostgresShortLinkStore implements ShortLinkStore {
   static async open(databaseUrl: string): Promise<PostgresShortLinkStore> {
     assertPostgresUrl(databaseUrl);
     const pool = new Pool({ connectionString: databaseUrl, max: 10 });
+    pool.on("error", () => undefined);
     try {
       for (const statement of schemaStatements(SHORT_LINK_SCHEMA)) {
         await pool.query(statement);
