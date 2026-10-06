@@ -7,13 +7,14 @@ The production image runs the React application, URL Shortener API, redirects, a
 For local development, start Vite and the Node server in separate shells:
 
 ```bash
-npm run dev
+npm run fe:dev
 ```
 
 ```bash
-URL_SHORTENER_TTL_SECONDS=2592000 \
-npm run dev:server
+npm run be:dev
 ```
+
+`be:dev` loads a gitignored `.env` when the file exists. Copy `.env.example` and edit it. A variable already set in the shell overrides the file. The production process does not read `.env`.
 
 Startup validates TTL and `MAX_ACTIVE_LINKS` first. It then tries D1 when `D1_GATEWAY_URL` and `D1_GATEWAY_TOKEN` are both non-empty and the URL is an absolute `http:` or `https:` URL with a host and no embedded credentials. A successful `GET /internal/health` probe selects D1 and does not open Postgres. Missing gateway settings, a rejected URL, a failed probe, or a thrown probe error make D1 unavailable.
 
@@ -58,7 +59,7 @@ docker logs -f <container>
 
 Application logging has no file rotation. Operators must configure retention and rotation in the Docker logging driver.
 
-Useful lifecycle and incident events are `server_start`, `server_ready`, `cleanup_completed`, `cleanup_skipped`, `cleanup_failed`, `request_failed`, `shutdown_started`, and `shutdown_completed`. Startup records include `backendType` (`d1` or `postgres`), port 8080, and `intervalMs: 300000`. When `backendType` is `postgres`, `server_start` and `server_ready` also include `reason: "d1_unavailable"`. That reason is not an error. Cleanup completion includes its trigger, deletion count, and duration. `server_start_failed` with `reason: "invalid_configuration_or_startup_failure"` means the process exited before listen. Correlate unexpected request failures using the safe request ID returned in the response header.
+Useful lifecycle and incident events are `server_start`, `server_ready`, `link_created`, `cleanup_completed`, `cleanup_skipped`, `cleanup_failed`, `request_failed`, `shutdown_started`, and `shutdown_completed`. A successful link creation writes one `link_created` info line with `requestId` only. Startup records include `backendType` (`d1` or `postgres`), port 8080, and `intervalMs: 300000`. When `backendType` is `postgres`, `server_start` and `server_ready` also include `reason: "d1_unavailable"`. That reason is not an error. Cleanup completion includes its trigger, deletion count, and duration. `server_start_failed` with `reason: "invalid_configuration_or_startup_failure"` means the process exited before listen. Correlate unexpected request failures using the safe request ID returned in the response header.
 
 Logs must never contain destination URLs, bearer tokens, secrets, authorization headers, request bodies, `DATABASE_URL`, raw SQL errors, or raw gateway response bodies. Validation, collision, missing/expired-link, and rate-limit responses are expected and are not error events. If a prohibited value appears, restrict log access, rotate the affected credential, preserve only redacted evidence, and investigate the logging path before restarting traffic.
 
@@ -99,7 +100,7 @@ Use an explicit local public origin only for Compose interpolation:
 ```bash
 npm run test:all
 npm run typecheck
-npm run build
+npm run fe:build
 npm run build:docker
 PUBLIC_BASE_URL=http://127.0.0.1:8080 docker compose config
 PUBLIC_BASE_URL=http://127.0.0.1:8080 docker compose build
