@@ -7,12 +7,12 @@
   "include": [
     "src/features/url-shortener/backend/worker.ts",
     "src/features/url-shortener/backend/d1-store.ts",
-    "src/features/url-shortener/backend/local-backend.ts",
-    "src/features/url-shortener/backend/slug.ts",
-    "src/features/url-shortener/backend/short-link-backend.ts",
     "src/features/url-shortener/backend/cloudflare-types.d.ts",
-    "src/features/url-shortener/url-shortener.model.ts",
-    "src/features/url-shortener/url-shortener.validation.ts"
+    "src/shared/short-links/model.ts",
+    "src/shared/short-links/validation.ts",
+    "src/shared/short-links/local-backend.ts",
+    "src/shared/short-links/slug.ts",
+    "src/shared/short-links/short-link-backend.ts"
   ],
   "exclude": ["src/features/url-shortener/backend/**/*.test.ts"]
 }

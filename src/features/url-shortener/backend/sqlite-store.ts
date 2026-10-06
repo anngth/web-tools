@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
-import type { ShortLinkRecord } from "../url-shortener.model";
-import type { ShortLinkStore } from "./short-link-backend";
-import { SQLITE_SCHEMA } from "./schema";
+import type { ShortLinkRecord } from "../../../shared/short-links/model.ts";
+import type { ShortLinkStore } from "../../../shared/short-links/short-link-backend.ts";
+import { SHORT_LINK_SCHEMA } from "../../../shared/short-links/schema.ts";
 
 interface ShortLinkRow {
   id: string;
@@ -40,7 +40,7 @@ export class SqliteShortLinkStore implements ShortLinkStore {
     if (path !== ":memory:" && path !== "") {
       this.database.pragma("journal_mode = WAL");
     }
-    this.database.exec(SQLITE_SCHEMA);
+    this.database.exec(SHORT_LINK_SCHEMA);
 
     this.findBySlugStatement = this.database.prepare<[string], ShortLinkRow>(`
       SELECT

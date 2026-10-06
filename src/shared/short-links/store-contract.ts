@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ShortLinkRecord } from "../url-shortener.model";
+import type { ShortLinkRecord } from "./model";
 import type { ShortLinkStore } from "./short-link-backend";
 
 type StoreFactory = () => Promise<ShortLinkStore> | ShortLinkStore;

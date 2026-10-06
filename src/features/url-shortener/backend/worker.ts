@@ -3,10 +3,10 @@ import {
   ShortLinkError,
   isShortLinkError,
   type CreateShortLinkInput,
-} from "../url-shortener.model";
-import { validateTtlSeconds } from "../url-shortener.validation";
+} from "../../../shared/short-links/model.ts";
+import { validateTtlSeconds } from "../../../shared/short-links/validation.ts";
 import { D1ShortLinkStore } from "./d1-store";
-import { LocalShortLinkBackend } from "./local-backend";
+import { LocalShortLinkBackend } from "../../../shared/short-links/local-backend.ts";
 import {
   RequestBodyTooLargeError,
   readLimitedRequestBody,

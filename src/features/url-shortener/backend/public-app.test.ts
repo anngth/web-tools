@@ -4,11 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { serve } from "@hono/node-server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ShortLinkError, type ShortLinkStats } from "../url-shortener.model";
+import { ShortLinkError, type ShortLinkStats } from "../../../shared/short-links/model.ts";
 import type { AppLogger } from "./logger";
 import { createPublicApp } from "./public-app";
 import { createFixedWindowLimiter } from "./rate-limiter";
-import type { ShortLinkBackend } from "./short-link-backend";
+import type { ShortLinkBackend } from "../../../shared/short-links/short-link-backend.ts";
 
 const now = new Date("2026-07-12T00:00:00.000Z");
 const stats: ShortLinkStats = {

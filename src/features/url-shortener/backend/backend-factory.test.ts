@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { D1GatewayClient } from "./d1-gateway-client";
 import { createShortLinkBackend } from "./backend-factory";
-import { LocalShortLinkBackend } from "./local-backend";
+import { LocalShortLinkBackend } from "../../../shared/short-links/local-backend.ts";
 
 describe("createShortLinkBackend", () => {
   it("selects SQLite with the default TTL and trims its configuration", async () => {

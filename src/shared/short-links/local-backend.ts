@@ -4,13 +4,13 @@ import {
   type ShortLinkPublic,
   type ShortLinkRecord,
   type ShortLinkStats,
-} from "../url-shortener.model";
+} from "./model";
 import {
   computeExpiresAt,
   isExpired,
   validateCustomAlias,
   validateDestinationUrl,
-} from "../url-shortener.validation";
+} from "./validation";
 import { generateSlug } from "./slug";
 import type { ShortLinkBackend, ShortLinkStore } from "./short-link-backend";
 

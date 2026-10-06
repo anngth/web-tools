@@ -5,4 +5,4 @@ export type {
   CreatedShortLink,
   CreateShortLinkInput,
   ShortLinkStats,
-} from "./url-shortener.model";
+} from "../../shared/short-links/model.ts";

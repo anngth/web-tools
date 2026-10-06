@@ -1,4 +1,4 @@
-import type { CreatedShortLink } from "./url-shortener.model";
+import type { CreatedShortLink } from "../../shared/short-links/model.ts";
 import { isCreatedShortLink } from "./url-shortener.api";
 
 export const CREATED_LINKS_STORAGE_KEY =

@@ -1,4 +1,4 @@
-export const SQLITE_SCHEMA = `
+export const SHORT_LINK_SCHEMA = `
   CREATE TABLE IF NOT EXISTS short_links (
     id TEXT PRIMARY KEY,
     slug TEXT NOT NULL UNIQUE,

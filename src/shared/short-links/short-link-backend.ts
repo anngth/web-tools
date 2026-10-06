@@ -3,7 +3,7 @@ import type {
   ShortLinkPublic,
   ShortLinkRecord,
   ShortLinkStats,
-} from "../url-shortener.model";
+} from "./model";
 
 export interface ShortLinkStore {
   findBySlug(slug: string): Promise<ShortLinkRecord | null>;

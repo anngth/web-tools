@@ -1,5 +1,5 @@
 import type { AppLogger } from "./logger";
-import type { ShortLinkBackend } from "./short-link-backend";
+import type { ShortLinkBackend } from "../../../shared/short-links/short-link-backend.ts";
 
 const CLEANUP_INTERVAL_MS = 300_000 as const;
 

@@ -3,8 +3,8 @@ import {
   type CreateShortLinkInput,
   type ShortLinkPublic,
   type ShortLinkStats,
-} from "../url-shortener.model";
-import type { ShortLinkBackend } from "./short-link-backend";
+} from "../../../shared/short-links/model.ts";
+import type { ShortLinkBackend } from "../../../shared/short-links/short-link-backend.ts";
 
 const MAX_GATEWAY_RESPONSE_BYTES = 16 * 1024;
 const DEFAULT_TIMEOUT_MS = 10_000;

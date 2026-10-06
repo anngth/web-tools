@@ -6,11 +6,11 @@
   "include": [
     "src/features/url-shortener/backend/**/*.ts",
     "src/app/toolSeoData.ts",
-    "src/features/url-shortener/url-shortener.model.ts",
-    "src/features/url-shortener/url-shortener.validation.ts"
+    "src/shared/short-links/**/*.ts"
   ],
   "exclude": [
     "src/features/url-shortener/backend/**/*.test.ts",
+    "src/shared/short-links/**/*.test.ts",
     "src/features/url-shortener/backend/worker.ts",
     "src/features/url-shortener/backend/d1-store.ts",
     "src/features/url-shortener/backend/worker-test.setup.ts",

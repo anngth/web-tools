@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ShortLinkError } from "../url-shortener.model";
+import { ShortLinkError } from "../../../shared/short-links/model.ts";
 import { D1GatewayClient } from "./d1-gateway-client";
 
 const NOW = new Date("2026-07-12T03:04:05.006Z");

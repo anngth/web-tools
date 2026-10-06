@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { isShortLinkError, ShortLinkError } from "./url-shortener.model";
+import { isShortLinkError, ShortLinkError } from "./model";
 import {
   computeExpiresAt,
   isExpired,
   validateCustomAlias,
   validateDestinationUrl,
   validateTtlSeconds,
-} from "./url-shortener.validation";
+} from "./validation";
 
 describe("validateDestinationUrl", () => {
   it.each([

@@ -6,7 +6,7 @@ import { Hono, type Context } from "hono";
 import {
   isShortLinkError,
   type CreateShortLinkInput,
-} from "../url-shortener.model";
+} from "../../../shared/short-links/model.ts";
 import type { AppLogger } from "./logger";
 import type { RateLimiter } from "./rate-limiter";
 import {
@@ -14,7 +14,7 @@ import {
   readLimitedRequestBody,
 } from "./read-limited-body";
 import { renderIndexHtml, renderSiteOrigin } from "./index-html";
-import type { ShortLinkBackend } from "./short-link-backend";
+import type { ShortLinkBackend } from "../../../shared/short-links/short-link-backend.ts";
 
 const MAX_JSON_BODY_BYTES = 16 * 1024;
 const CONTENT_SECURITY_POLICY =

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { ArrowDown, Check, Clipboard, RefreshCw } from "lucide-react";
 import { copyTextToClipboard } from "../../shared/clipboard";
-import type { CreatedShortLink, ShortLinkStats } from "./url-shortener.model";
+import type { CreatedShortLink, ShortLinkStats } from "../../shared/short-links/model.ts";
 import {
   UrlShortenerApiError,
   createShortLink,

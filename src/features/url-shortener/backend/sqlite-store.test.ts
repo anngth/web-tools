@@ -3,8 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
-import type { ShortLinkRecord } from "../url-shortener.model";
-import { describeShortLinkStoreContract } from "./store-contract";
+import type { ShortLinkRecord } from "../../../shared/short-links/model.ts";
+import { describeShortLinkStoreContract } from "../../../shared/short-links/store-contract.ts";
 import { SqliteShortLinkStore } from "./sqlite-store";
 
 type InspectableStore = {

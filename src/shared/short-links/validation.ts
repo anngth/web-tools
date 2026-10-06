@@ -1,4 +1,4 @@
-import { ShortLinkError } from "./url-shortener.model";
+import { ShortLinkError } from "./model";
 
 const DEFAULT_TTL_SECONDS = 2_592_000;
 const ALIAS_PATTERN = /^[a-z0-9-]{3,48}$/;

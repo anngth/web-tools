@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ShortLinkError, type ShortLinkRecord } from "../url-shortener.model";
+import { ShortLinkError, type ShortLinkRecord } from "./model";
 import { LocalShortLinkBackend } from "./local-backend";
 import { generateSlug } from "./slug";
 import type { ShortLinkStore } from "./short-link-backend";
