@@ -1,3 +1,4 @@
+
   CREATE TABLE IF NOT EXISTS short_links (
     id TEXT PRIMARY KEY,
     slug TEXT NOT NULL UNIQUE,

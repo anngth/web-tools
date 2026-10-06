@@ -5,14 +5,14 @@
     "types": ["@cloudflare/workers-types"]
   },
   "include": [
-    "src/features/url-shortener/backend/worker.ts",
-    "src/features/url-shortener/backend/d1-store.ts",
-    "src/features/url-shortener/backend/cloudflare-types.d.ts",
+    "src/worker/short-links/worker.ts",
+    "src/worker/short-links/d1-store.ts",
+    "src/worker/short-links/cloudflare-types.d.ts",
     "src/shared/short-links/model.ts",
     "src/shared/short-links/validation.ts",
     "src/shared/short-links/local-backend.ts",
     "src/shared/short-links/slug.ts",
     "src/shared/short-links/short-link-backend.ts"
   ],
-  "exclude": ["src/features/url-shortener/backend/**/*.test.ts"]
+  "exclude": ["src/worker/**/*.test.ts"]
 }

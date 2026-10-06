@@ -7,8 +7,8 @@ export default mergeConfig(
   defineConfig({
     test: {
       exclude: [
-        "src/features/url-shortener/backend/d1-store.test.ts",
-        "src/features/url-shortener/backend/worker.test.ts",
+        "src/worker/short-links/d1-store.test.ts",
+        "src/worker/short-links/worker.test.ts",
         "node_modules/**",
         "dist/**",
       ],

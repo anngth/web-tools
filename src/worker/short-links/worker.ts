@@ -3,14 +3,14 @@ import {
   ShortLinkError,
   isShortLinkError,
   type CreateShortLinkInput,
-} from "../../../shared/short-links/model.ts";
-import { validateTtlSeconds } from "../../../shared/short-links/validation.ts";
+} from "../../shared/short-links/model.ts";
+import { validateTtlSeconds } from "../../shared/short-links/validation.ts";
 import { D1ShortLinkStore } from "./d1-store";
-import { LocalShortLinkBackend } from "../../../shared/short-links/local-backend.ts";
+import { LocalShortLinkBackend } from "../../shared/short-links/local-backend.ts";
 import {
   RequestBodyTooLargeError,
   readLimitedRequestBody,
-} from "./read-limited-body";
+} from "../../features/url-shortener/backend/read-limited-body";
 
 const MAX_BODY_BYTES = 16 * 1024;
 
@@ -132,6 +132,12 @@ app.use("*", async (context, next) => {
   }
 
   await next();
+});
+
+app.get("/internal/health", async (context) => {
+  const row = await context.env.DB.prepare("SELECT 1 AS ok").first();
+  if (!row) return context.json(jsonError("internal_error"), 500);
+  return context.json({ ok: true });
 });
 
 app.post("/internal/links", async (context) => {

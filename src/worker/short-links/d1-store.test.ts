@@ -1,8 +1,8 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import type { ShortLinkRecord } from "../../../shared/short-links/model.ts";
+import type { ShortLinkRecord } from "../../shared/short-links/model.ts";
 import { D1ShortLinkStore } from "./d1-store";
-import { describeShortLinkStoreContract } from "../../../shared/short-links/store-contract.ts";
+import { describeShortLinkStoreContract } from "../../shared/short-links/store-contract.ts";
 
 describeShortLinkStoreContract("D1", () => new D1ShortLinkStore(env.DB));
 

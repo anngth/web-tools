@@ -1,5 +1,5 @@
-import type { ShortLinkRecord } from "../../../shared/short-links/model.ts";
-import type { ShortLinkStore } from "../../../shared/short-links/short-link-backend.ts";
+import type { ShortLinkRecord } from "../../shared/short-links/model.ts";
+import type { ShortLinkStore } from "../../shared/short-links/short-link-backend.ts";
 
 interface ShortLinkRow {
   id: string;

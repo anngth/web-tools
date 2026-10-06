@@ -52,6 +52,44 @@ async function create(alias = "docs", now = "2026-07-12T00:00:00.000Z") {
 describe("authenticated D1 Worker gateway", () => {
   afterEach(() => vi.restoreAllMocks());
 
+  it("returns exact health without writing short links", async () => {
+    const response = await worker.request("/internal/health", {
+      method: "GET",
+      headers: { authorization: "Bearer test-secret" },
+    }, env);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+    const count = await env.DB.prepare(
+      "SELECT COUNT(*) AS count FROM short_links",
+    ).first<{ count: number }>();
+    expect(count?.count).toBe(0);
+  });
+
+  it("rejects health with the wrong token", async () => {
+    const response = await worker.request("/internal/health", {
+      method: "GET",
+      headers: { authorization: "Bearer wrong" },
+    }, env);
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("returns internal_error when the health statement fails", async () => {
+    const response = await worker.request("/internal/health", {
+      method: "GET",
+      headers: { authorization: "Bearer test-secret" },
+    }, {
+      ...env,
+      DB: {
+        prepare() {
+          return { async first() { throw new Error("d1 unavailable"); } };
+        },
+      } as D1Database,
+    });
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "internal_error" });
+  });
+
   it.each([
     ["missing", undefined],
     ["incorrect", "Bearer wrong-secret"],

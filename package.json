@@ -19,8 +19,8 @@
     "typecheck:worker": "tsc --noEmit -p tsconfig.worker.json",
     "typecheck": "npm run typecheck:browser && npm run typecheck:node && npm run typecheck:worker",
     "start": "node dist-server/server.js",
-    "cf:dev": "wrangler dev src/features/url-shortener/backend/worker.ts",
-    "cf:deploy": "wrangler deploy src/features/url-shortener/backend/worker.ts"
+    "cf:dev": "wrangler dev src/worker/short-links/worker.ts",
+    "cf:deploy": "wrangler deploy src/worker/short-links/worker.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.0.8",

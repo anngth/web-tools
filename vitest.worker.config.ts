@@ -15,7 +15,7 @@ export default defineConfig({
         bindings: {
           GATEWAY_TOKEN: "test-secret",
           TEST_MIGRATIONS: await readD1Migrations(
-            "src/features/url-shortener/backend/migrations",
+            "src/worker/short-links/migrations",
           ),
         },
       },
@@ -23,11 +23,11 @@ export default defineConfig({
   ],
   test: {
     include: [
-      "src/features/url-shortener/backend/d1-store.test.ts",
-      "src/features/url-shortener/backend/worker.test.ts",
+      "src/worker/short-links/d1-store.test.ts",
+      "src/worker/short-links/worker.test.ts",
     ],
     setupFiles: [
-      "src/features/url-shortener/backend/worker-test.setup.ts",
+      "src/worker/short-links/worker-test.setup.ts",
     ],
   },
 });
