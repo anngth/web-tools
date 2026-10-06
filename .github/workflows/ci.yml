@@ -18,6 +18,21 @@ jobs:
     name: Test and build
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: web_tools_test
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U postgres -d web_tools_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,6 +49,8 @@ jobs:
 
       - name: Run tests
         run: npm test
+        env:
+          POSTGRES_TEST_URL: postgres://postgres:postgres@localhost:5432/web_tools_test
 
       - name: Build
         run: npm run build

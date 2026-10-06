@@ -25,7 +25,8 @@
   "dependencies": {
     "@hono/node-server": "^2.0.8",
     "better-sqlite3": "^12.11.1",
-    "hono": "^4.12.29"
+    "hono": "^4.12.29",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.18.4",
@@ -35,6 +36,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^26.1.1",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.0.0",
