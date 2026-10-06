@@ -1,5 +1,5 @@
-import { Client } from "pg";
-import { describe, expect, it } from "vitest";
+import { Client, Pool } from "pg";
+import { describe, expect, it, vi } from "vitest";
 import { describeShortLinkStoreContract } from "../../shared/short-links/store-contract.ts";
 import { PostgresShortLinkStore } from "./postgres-store";
 
@@ -11,21 +11,25 @@ if (process.env.CI === "true" && !databaseUrl) {
 
 describe.skipIf(!databaseUrl)("PostgresShortLinkStore", () => {
   it("creates short_links and idx_short_links_expires_at", async () => {
-    const store = await PostgresShortLinkStore.open(
-      databaseUrl!.replace(/^postgres:/, "postgresql:"),
-    );
-    await store.close();
+    let store: PostgresShortLinkStore | undefined;
     const client = new Client({ connectionString: databaseUrl });
-    await client.connect();
-    const tables = await client.query(
-      "SELECT to_regclass('public.short_links') AS table_name",
-    );
-    const indexes = await client.query(
-      "SELECT indexname FROM pg_indexes WHERE indexname = 'idx_short_links_expires_at'",
-    );
-    await client.end();
-    expect(tables.rows[0]?.table_name).toBe("short_links");
-    expect(indexes.rows).toHaveLength(1);
+    try {
+      store = await PostgresShortLinkStore.open(
+        databaseUrl!.replace(/^postgres:/, "postgresql:"),
+      );
+      await client.connect();
+      const tables = await client.query(
+        "SELECT to_regclass('public.short_links') AS table_name",
+      );
+      const indexes = await client.query(
+        "SELECT indexname FROM pg_indexes WHERE indexname = 'idx_short_links_expires_at'",
+      );
+      expect(tables.rows[0]?.table_name).toBe("short_links");
+      expect(indexes.rows).toHaveLength(1);
+    } finally {
+      await client.end().catch(() => undefined);
+      await store?.close();
+    }
   });
 });
 
@@ -50,4 +54,27 @@ it("rejects a postgres URL without a host before connecting", async () => {
   await expect(PostgresShortLinkStore.open("postgres:///links")).rejects.toThrow(
     "Invalid short link backend configuration",
   );
+});
+
+it("does not reject open or surface a driver message when the pool emits an error", async () => {
+  const driverMessage = "password=secret connection terminated";
+  const query = vi.spyOn(Pool.prototype, "query").mockImplementation(async function (this: Pool) {
+    this.emit("error", new Error(driverMessage));
+    return { rows: [], rowCount: 0 } as never;
+  });
+  const end = vi.spyOn(Pool.prototype, "end").mockResolvedValue();
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+  try {
+    const store = await PostgresShortLinkStore.open(
+      "postgres://user:secret@127.0.0.1:9/links",
+    );
+    await store.close();
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(JSON.stringify(consoleError.mock.calls)).not.toContain(driverMessage);
+  } finally {
+    query.mockRestore();
+    end.mockRestore();
+    consoleError.mockRestore();
+  }
 });

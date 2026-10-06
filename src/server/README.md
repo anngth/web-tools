@@ -30,7 +30,7 @@ PUBLIC_BASE_URL=https://tools.example.com docker compose up --build -d
 Failure logs one JSON line and exits 1:
 
 ```json
-{"level":"error","event":"server_start_failed","reason":"invalid_configuration_or_startup_failure"}
+{"timestamp":"2026-07-12T03:04:05.006Z","level":"error","event":"server_start_failed","reason":"invalid_configuration_or_startup_failure"}
 ```
 
 That reason covers invalid configuration and a Postgres open or schema failure. The log does not include `DATABASE_URL`, gateway URLs, tokens, probe HTTP status, SQL, or driver text.

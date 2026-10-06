@@ -238,14 +238,7 @@ export class D1GatewayClient implements ShortLinkBackend {
 
   async probe(): Promise<boolean> {
     try {
-      const response = await this.fetchImpl(`${this.baseUrl.toString()}internal/health`, {
-        method: "GET",
-        headers: {
-          authorization: `Bearer ${this.token}`,
-          ...JSON_HEADERS,
-        },
-        signal: AbortSignal.timeout(this.timeoutMs),
-      });
+      const response = await this.request("internal/health", { method: "GET" });
       if (response.status !== 200) return false;
       const body = await readLimitedJson(response);
       const record = asRecord(body);

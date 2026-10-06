@@ -12,7 +12,8 @@
     "src/shared/short-links/validation.ts",
     "src/shared/short-links/local-backend.ts",
     "src/shared/short-links/slug.ts",
-    "src/shared/short-links/short-link-backend.ts"
+    "src/shared/short-links/short-link-backend.ts",
+    "src/shared/http/read-limited-body.ts"
   ],
   "exclude": ["src/worker/**/*.test.ts"]
 }

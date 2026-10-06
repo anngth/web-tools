@@ -42,13 +42,6 @@ function assertPostgresUrl(databaseUrl: string): void {
   }
 }
 
-function schemaStatements(schema: string): string[] {
-  return schema
-    .split(";")
-    .map((statement) => statement.trim())
-    .filter((statement) => statement.length > 0);
-}
-
 export class PostgresShortLinkStore implements ShortLinkStore {
   private ended = false;
 
@@ -59,9 +52,7 @@ export class PostgresShortLinkStore implements ShortLinkStore {
     const pool = new Pool({ connectionString: databaseUrl, max: 10 });
     pool.on("error", () => undefined);
     try {
-      for (const statement of schemaStatements(SHORT_LINK_SCHEMA)) {
-        await pool.query(statement);
-      }
+      await pool.query(SHORT_LINK_SCHEMA);
     } catch (error) {
       await pool.end().catch(() => undefined);
       throw error;

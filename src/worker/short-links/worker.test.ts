@@ -74,6 +74,22 @@ describe("authenticated D1 Worker gateway", () => {
     expect(await response.json()).toEqual({ error: "unauthorized" });
   });
 
+  it("returns internal_error when the health statement returns no row", async () => {
+    const response = await worker.request("/internal/health", {
+      method: "GET",
+      headers: { authorization: "Bearer test-secret" },
+    }, {
+      ...env,
+      DB: {
+        prepare() {
+          return { async first() { return null; } };
+        },
+      } as D1Database,
+    });
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "internal_error" });
+  });
+
   it("returns internal_error when the health statement fails", async () => {
     const response = await worker.request("/internal/health", {
       method: "GET",

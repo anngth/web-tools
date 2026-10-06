@@ -12,7 +12,7 @@ import type { RateLimiter } from "./rate-limiter";
 import {
   RequestBodyTooLargeError,
   readLimitedRequestBody,
-} from "./read-limited-body";
+} from "../../shared/http/read-limited-body.ts";
 import { renderIndexHtml, renderSiteOrigin } from "./index-html";
 import type { ShortLinkBackend } from "../../shared/short-links/short-link-backend.ts";
 

@@ -27,7 +27,7 @@ describe("createJsonLogger", () => {
   it("writes one single-line JSON object to the stream for each level", () => {
     const { logger, stdout, stderr } = makeLogger();
 
-    logger.info("server_ready", { backendType: "sqlite", port: 8080 });
+    logger.info("server_ready", { backendType: "d1", port: 8080 });
     logger.error("request_failed", { requestId: "req-1", reason: "internal" });
 
     expect(stdout.log).toHaveBeenCalledTimes(1);
@@ -36,7 +36,7 @@ describe("createJsonLogger", () => {
       timestamp: NOW.toISOString(),
       level: "info",
       event: "server_ready",
-      backendType: "sqlite",
+      backendType: "d1",
       port: 8080,
     }));
     expect(stderr.error).toHaveBeenCalledWith(JSON.stringify({
@@ -148,7 +148,7 @@ describe("createJsonLogger", () => {
       gatewayBody: "secret-gateway-body",
     };
 
-    logger.info("server_start", { backendType: "sqlite", ...sensitive } as Record<string, string>);
+    logger.info("server_start", { backendType: "postgres", ...sensitive } as Record<string, string>);
     logger.error("request_failed", {
       requestId: "req-1",
       reason: "internal",

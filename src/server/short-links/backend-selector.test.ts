@@ -84,4 +84,31 @@ describe("selectShortLinkBackend", () => {
     expect(probeD1).not.toHaveBeenCalled();
     expect(openPostgres).not.toHaveBeenCalled();
   });
+
+  it("rejects an invalid max active links count before probing or opening Postgres", async () => {
+    const probeD1 = vi.fn();
+    const openPostgres = vi.fn();
+    await expect(selectShortLinkBackend(
+      { ...d1Env, MAX_ACTIVE_LINKS: "many" },
+      { probeD1, openPostgres },
+    )).rejects.toThrow(new Error("Invalid short link backend configuration"));
+    expect(probeD1).not.toHaveBeenCalled();
+    expect(openPostgres).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-postgres DATABASE_URL when D1 is not selected", async () => {
+    const probeD1 = vi.fn();
+    const openPostgres = vi.fn();
+    await expect(selectShortLinkBackend(
+      {
+        ...d1Env,
+        D1_GATEWAY_URL: undefined,
+        D1_GATEWAY_TOKEN: undefined,
+        DATABASE_URL: "http://localhost/db",
+      },
+      { probeD1, openPostgres },
+    )).rejects.toThrow(new Error("Invalid short link backend configuration"));
+    expect(probeD1).not.toHaveBeenCalled();
+    expect(openPostgres).not.toHaveBeenCalled();
+  });
 });

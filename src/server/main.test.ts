@@ -93,24 +93,22 @@ function createHarness(overrides: Partial<DockerServerDependencies> = {}) {
 
 const VALID_ENV = {
   NODE_ENV: "production",
-  DATABASE_BACKEND: "sqlite",
-  SQLITE_PATH: ":memory:",
   URL_SHORTENER_TTL_SECONDS: "60",
   PUBLIC_BASE_URL: "https://sho.rt",
   TRUST_PROXY: "false",
 };
 
 describe("startDockerServer configuration and startup", () => {
-  it.each([
-    ["backend", { ...VALID_ENV, DATABASE_BACKEND: "invalid" }],
-    ["TTL", { ...VALID_ENV, URL_SHORTENER_TTL_SECONDS: "0" }],
-  ])("rejects invalid %s configuration before listening", async (_name, env) => {
+  it("rejects invalid TTL configuration before listening", async () => {
     const harness = createHarness();
     harness.dependencies.createBackend = vi.fn(() => {
       throw new Error("Invalid short link backend configuration");
     });
 
-    await expect(startDockerServer({ env, dependencies: harness.dependencies })).rejects.toThrow(
+    await expect(startDockerServer({
+      env: { ...VALID_ENV, URL_SHORTENER_TTL_SECONDS: "0" },
+      dependencies: harness.dependencies,
+    })).rejects.toThrow(
       "Invalid short link backend configuration",
     );
 

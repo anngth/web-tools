@@ -10,7 +10,7 @@ import { LocalShortLinkBackend } from "../../shared/short-links/local-backend.ts
 import {
   RequestBodyTooLargeError,
   readLimitedRequestBody,
-} from "../../server/http/read-limited-body";
+} from "../../shared/http/read-limited-body.ts";
 
 const MAX_BODY_BYTES = 16 * 1024;
 
