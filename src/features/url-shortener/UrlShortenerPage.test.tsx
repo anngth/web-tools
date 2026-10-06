@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { copyTextToClipboard } from "../../shared/clipboard";
 import {
   UrlShortenerApiError,
+  checkShortLinkService,
   createShortLink,
   getShortLinkStats,
 } from "./url-shortener.api";
@@ -15,6 +16,7 @@ vi.mock("./url-shortener.api", async (importOriginal) => {
   const original = await importOriginal<typeof import("./url-shortener.api")>();
   return {
     ...original,
+    checkShortLinkService: vi.fn(),
     createShortLink: vi.fn(),
     getShortLinkStats: vi.fn(),
   };
@@ -41,6 +43,7 @@ const secondCreatedLink = {
   shortUrl: "https://short.example/s/guide-84",
 };
 
+const serviceMock = vi.mocked(checkShortLinkService);
 const createMock = vi.mocked(createShortLink);
 const statsMock = vi.mocked(getShortLinkStats);
 const copyMock = vi.mocked(copyTextToClipboard);
@@ -59,6 +62,7 @@ async function createALink(alias?: string) {
   const user = userEvent.setup();
   createMock.mockResolvedValueOnce(createdLink);
   render(<UrlShortenerPage />);
+  await screen.findByRole("textbox", { name: "Destination URL" });
   await user.type(
     screen.getByRole("textbox", { name: "Destination URL" }),
     createdLink.destinationUrl,
@@ -78,15 +82,77 @@ describe("UrlShortenerPage", () => {
   beforeEach(() => {
     sessionStorage.clear();
     vi.clearAllMocks();
+    serviceMock.mockResolvedValue(undefined);
     copyMock.mockResolvedValue(true);
   });
 
   afterEach(cleanup);
 
+  it("hides the form until the short-link service answers", async () => {
+    const pending = deferred<void>();
+    serviceMock.mockReturnValueOnce(pending.promise);
+    render(<UrlShortenerPage />);
+
+    expect(screen.getByText("Checking the short-link service…")).toBeVisible();
+    expect(
+      screen.queryByRole("textbox", { name: "Destination URL" }),
+    ).not.toBeInTheDocument();
+
+    pending.resolve();
+    expect(
+      await screen.findByRole("textbox", { name: "Destination URL" }),
+    ).toBeVisible();
+  });
+
+  it("replaces the form when the short-link service is unreachable", async () => {
+    sessionStorage.setItem(CREATED_LINKS_STORAGE_KEY, JSON.stringify([createdLink]));
+    serviceMock.mockRejectedValueOnce(
+      new UrlShortenerApiError(
+        "network_error",
+        "Could not reach the short-link service. Check your connection and try again.",
+      ),
+    );
+
+    render(<UrlShortenerPage />);
+
+    expect(
+      await screen.findByText("The short-link service is not running."),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("textbox", { name: "Destination URL" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(createdLink.shortUrl)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Refresh statistics" })).toBeDisabled();
+    expect(statsMock).not.toHaveBeenCalled();
+  });
+
+  it("shows the form after retry reaches the service", async () => {
+    const user = userEvent.setup();
+    serviceMock
+      .mockRejectedValueOnce(
+        new UrlShortenerApiError(
+          "network_error",
+          "Could not reach the short-link service. Check your connection and try again.",
+        ),
+      )
+      .mockResolvedValueOnce(undefined);
+    render(<UrlShortenerPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Retry" }));
+
+    expect(
+      await screen.findByRole("textbox", { name: "Destination URL" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByText("The short-link service is not running."),
+    ).not.toBeInTheDocument();
+  });
+
   it("creates a link with the destination and optional alias on Enter", async () => {
     const user = userEvent.setup();
     createMock.mockResolvedValueOnce(createdLink);
     render(<UrlShortenerPage />);
+    await screen.findByRole("textbox", { name: "Destination URL" });
 
     await user.type(
       screen.getByRole("textbox", { name: "Destination URL" }),
@@ -147,6 +213,7 @@ describe("UrlShortenerPage", () => {
     const creation = deferred<typeof createdLink>();
     createMock.mockReturnValueOnce(creation.promise);
     render(<UrlShortenerPage />);
+    await screen.findByRole("textbox", { name: "Destination URL" });
     await user.type(
       screen.getByRole("textbox", { name: "Destination URL" }),
       createdLink.destinationUrl,
@@ -336,6 +403,7 @@ describe("UrlShortenerPage", () => {
     statsMock.mockReturnValueOnce(oldRefresh.promise);
     createMock.mockResolvedValueOnce(recreatedLink);
     render(<UrlShortenerPage />);
+    await screen.findByRole("textbox", { name: "Destination URL" });
 
     await user.clear(screen.getByRole("textbox", { name: "Destination URL" }));
     await user.type(
@@ -376,6 +444,7 @@ describe("UrlShortenerPage", () => {
     statsMock.mockReturnValueOnce(oldRefresh.promise);
     createMock.mockResolvedValueOnce(recreatedLink);
     render(<UrlShortenerPage />);
+    await screen.findByRole("textbox", { name: "Destination URL" });
 
     await user.clear(screen.getByRole("textbox", { name: "Destination URL" }));
     await user.type(
@@ -409,6 +478,7 @@ describe("UrlShortenerPage", () => {
       ),
     );
     render(<UrlShortenerPage />);
+    await screen.findByRole("textbox", { name: "Destination URL" });
     await user.type(
       screen.getByRole("textbox", { name: "Destination URL" }),
       createdLink.destinationUrl,

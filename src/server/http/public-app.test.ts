@@ -102,7 +102,8 @@ async function expectError(
 describe("createPublicApp", () => {
   it("returns the exact flat create schema with a configured public origin", async () => {
     const create = vi.fn(async () => stats);
-    const application = app({ backend: backend({ create }) });
+    const log = logger();
+    const application = app({ backend: backend({ create }), logger: log });
 
     const response = await application.request("/api/links", {
       method: "POST",
@@ -125,6 +126,10 @@ describe("createPublicApp", () => {
       },
       now,
     );
+    expect(log.info).toHaveBeenCalledTimes(1);
+    expect(log.info).toHaveBeenCalledWith("link_created", {
+      requestId: response.headers.get("x-request-id"),
+    });
   });
 
   it("uses the request origin outside production when no base URL is configured", async () => {
@@ -551,9 +556,12 @@ describe("createPublicApp", () => {
     const application = app({ backend: selectedBackend });
 
     const response = await application.request("/healthz");
+    const api = await application.request("/api/health");
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "ok" });
+    expect(api.status).toBe(200);
+    expect(await api.json()).toEqual({ status: "ok" });
     expect(selectedBackend.create).not.toHaveBeenCalled();
     expect(selectedBackend.stats).not.toHaveBeenCalled();
     expect(selectedBackend.resolve).not.toHaveBeenCalled();

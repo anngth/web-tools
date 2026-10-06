@@ -5,6 +5,7 @@ export type LogEvent =
   | "cleanup_completed"
   | "cleanup_skipped"
   | "cleanup_failed"
+  | "link_created"
   | "request_failed"
   | "shutdown_started"
   | "shutdown_completed";
@@ -20,6 +21,7 @@ const LOG_EVENTS: ReadonlySet<string> = new Set<LogEvent>([
   "cleanup_completed",
   "cleanup_skipped",
   "cleanup_failed",
+  "link_created",
   "request_failed",
   "shutdown_started",
   "shutdown_completed",

@@ -106,6 +106,9 @@ export function createPublicApp(options: {
 
     try {
       const created = await options.backend.create(input, now());
+      options.logger.info("link_created", {
+        requestId: context.get("requestId"),
+      });
       const publicOrigin = configuredOrigin ?? new URL(context.req.url).origin;
       return context.json(
         {
@@ -152,6 +155,7 @@ export function createPublicApp(options: {
   });
 
   app.get("/healthz", (context) => context.json({ status: "ok" }));
+  app.get("/api/health", (context) => context.json({ status: "ok" }));
   app.all("/api/*", (context) => publicError(context, 404, "not_found"));
 
   if (options.staticRoot !== undefined) {

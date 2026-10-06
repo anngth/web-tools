@@ -198,6 +198,19 @@ export function createShortLink(
   );
 }
 
+function isServiceHealth(value: unknown): value is { status: "ok" } {
+  return isRecord(value) && hasExactKeys(value, ["status"]) && value.status === "ok";
+}
+
+export function checkShortLinkService(): Promise<void> {
+  return request(
+    "/api/health",
+    { headers: { accept: "application/json" } },
+    200,
+    isServiceHealth,
+  ).then(() => undefined);
+}
+
 export function getShortLinkStats(slug: string): Promise<ShortLinkStats> {
   return request(
     `/api/links/${encodeURIComponent(slug)}/stats`,

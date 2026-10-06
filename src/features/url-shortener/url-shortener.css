@@ -3,6 +3,16 @@
   gap: var(--spacing-lg);
 }
 
+.urlShortenerNotice {
+  display: grid;
+  gap: var(--spacing-sm);
+  justify-items: start;
+}
+
+.urlShortenerNotice p {
+  margin: 0;
+}
+
 .urlShortenerForm {
   display: grid;
   gap: var(--spacing-xs);

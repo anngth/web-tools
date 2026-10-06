@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   UrlShortenerApiError,
+  checkShortLinkService,
   createShortLink,
   getShortLinkStats,
 } from "./url-shortener.api";
@@ -149,6 +150,25 @@ describe("url shortener API", () => {
     expect(error).toBeInstanceOf(UrlShortenerApiError);
     expect(error).toMatchObject({ status, code, message });
     expect(String(error)).not.toContain("raw secret");
+  });
+
+  it("treats an exact health response as a reachable service", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ status: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(checkShortLinkService()).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith("/api/health", {
+      headers: { accept: "application/json" },
+    });
+  });
+
+  it("reports a network failure when the health check cannot connect", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+
+    await expect(checkShortLinkService()).rejects.toMatchObject({
+      code: "network_error",
+      message: "Could not reach the short-link service. Check your connection and try again.",
+    });
   });
 
   it("does not read or expose a 413 response body", async () => {

@@ -5,6 +5,7 @@ import { copyTextToClipboard } from "../../shared/clipboard";
 import type { CreatedShortLink, ShortLinkStats } from "../../shared/short-links/model.ts";
 import {
   UrlShortenerApiError,
+  checkShortLinkService,
   createShortLink,
   getShortLinkStats,
 } from "./url-shortener.api";
@@ -43,7 +44,6 @@ export function UrlShortenerPage() {
   const [customAlias, setCustomAlias] = useState("");
   const [links, setLinks] = useState<CreatedShortLink[]>(loadCreatedLinks);
   const linksRef = useRef(links);
-  const initialLinksRef = useRef(links);
   const destinationInputRef = useRef<HTMLInputElement>(null);
   const [creating, setCreating] = useState(false);
   const refreshingLinksRef = useRef<Set<string>>(new Set());
@@ -52,6 +52,9 @@ export function UrlShortenerPage() {
   );
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [serviceState, setServiceState] = useState<
+    "checking" | "unavailable" | "ready"
+  >("checking");
 
   function replaceLinks(
     update: (current: CreatedShortLink[]) => CreatedShortLink[],
@@ -120,13 +123,30 @@ export function UrlShortenerPage() {
     }
   }
 
-  useEffect(() => {
-    for (const link of initialLinksRef.current) {
-      void refreshStats(link);
+  async function probeService() {
+    setServiceState("checking");
+    try {
+      await checkShortLinkService();
+      setServiceState("ready");
+    } catch {
+      setServiceState("unavailable");
     }
-    // Rehydration refreshes only the links present on initial mount.
+  }
+
+  useEffect(() => {
+    void probeService();
+    // The first probe runs once when the tab opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (serviceState !== "ready") return;
+    for (const link of linksRef.current) {
+      void refreshStats(link);
+    }
+    // Statistics refresh only after a successful probe, including Retry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serviceState]);
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -178,6 +198,25 @@ export function UrlShortenerPage() {
 
   return (
     <div className="panel urlShortener">
+      {serviceState !== "ready" && (
+        <section className="urlShortenerNotice" role="status">
+          <p>
+            {serviceState === "checking"
+              ? "Checking the short-link service…"
+              : "The short-link service is not running."}
+          </p>
+          {serviceState === "unavailable" && (
+            <button
+              className="urlShortenerSecondary"
+              type="button"
+              onClick={() => void probeService()}
+            >
+              Retry
+            </button>
+          )}
+        </section>
+      )}
+      {serviceState === "ready" && (
       <form
         className="urlShortenerForm"
         aria-label="Create short link"
@@ -242,6 +281,7 @@ export function UrlShortenerPage() {
           </button>
         </div>
       </form>
+      )}
 
       {links.length > 0 && (
         <section className="urlShortenerResults" aria-labelledby="created-links-heading">
@@ -298,7 +338,7 @@ export function UrlShortenerPage() {
                   <button
                     className="urlShortenerRefresh"
                     type="button"
-                    disabled={isRefreshing}
+                    disabled={isRefreshing || serviceState !== "ready"}
                     onClick={() => void refreshStats(link)}
                   >
                     <RefreshCw size={16} aria-hidden />
