@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
 describe("App tool registry integration", () => {
@@ -9,9 +9,24 @@ describe("App tool registry integration", () => {
     sessionStorage.clear();
     window.history.replaceState(null, "", "/");
   });
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
 
   it("switches from TOTP to the registered URL Shortener page", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        if (String(input) === "/api/health") {
+          return new Response(JSON.stringify({ status: "ok" }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }
+        return new Response(null, { status: 404 });
+      }),
+    );
     const user = userEvent.setup();
     render(<App />);
 
@@ -24,7 +39,7 @@ describe("App tool registry integration", () => {
       screen.getByRole("heading", { level: 1, name: "URL Shortener" }),
     ).toBeVisible();
     expect(
-      screen.getByRole("form", { name: "Create short link" }),
+      await screen.findByRole("form", { name: "Create short link" }),
     ).toBeVisible();
     expect(window.location.pathname).toBe("/url-shortener");
   });
