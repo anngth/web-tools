@@ -51,3 +51,6 @@ coverage/
 Thumbs.db
 .Spotlight-V100
 .Trashes
+
+# Local git worktrees
+.worktrees/
