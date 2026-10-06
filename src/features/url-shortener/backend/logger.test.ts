@@ -166,6 +166,24 @@ describe("createJsonLogger", () => {
     }
   });
 
+  it("keeps postgres fallback fields and redacts database url and sql", () => {
+    const { logger, stdout } = makeLogger();
+
+    logger.info("server_start", {
+      backendType: "postgres",
+      reason: "d1_unavailable",
+      databaseUrl: "postgres://user:secret@localhost/db",
+      sql: "SELECT secret",
+    });
+
+    const line = stdout.log.mock.calls[0][0] as string;
+    const record = JSON.parse(line) as Record<string, unknown>;
+    expect(record.backendType).toBe("postgres");
+    expect(record.reason).toBe("d1_unavailable");
+    expect(line).not.toContain("secret");
+    expect(line).not.toContain("SELECT");
+  });
+
   it("drops Error and unknown values without recursively inspecting or serializing them", () => {
     const { logger, stderr } = makeLogger();
     const unknownValue = Object.defineProperty({}, "secret", {

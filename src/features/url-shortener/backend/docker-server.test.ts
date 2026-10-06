@@ -52,7 +52,12 @@ function createHarness(overrides: Partial<DockerServerDependencies> = {}) {
   const signalHandlers = new Map<NodeJS.Signals, () => void>();
 
   const dependencies: DockerServerDependencies = {
-    createBackend: vi.fn(() => ({ backend, backendType: "sqlite", ttlSeconds: 60, maxActiveLinks: undefined })),
+    createBackend: vi.fn(async () => ({
+      backend,
+      backendType: "d1" as const,
+      ttlSeconds: 60,
+      maxActiveLinks: undefined,
+    })),
     createCleanup: vi.fn(() => cleanup),
     createApp: vi.fn(() => ({ fetch: vi.fn() }) as never),
     createLimiter: vi.fn(() => ({
@@ -183,7 +188,7 @@ describe("startDockerServer configuration and startup", () => {
     expect(harness.cleanup.start).not.toHaveBeenCalled();
     expect(harness.dependencies.listen).not.toHaveBeenCalled();
     expect(harness.logger.info).toHaveBeenCalledWith("server_start", {
-      backendType: "sqlite",
+      backendType: "d1",
       port: 8080,
       intervalMs: CLEANUP_INTERVAL_MS,
     });
@@ -195,11 +200,41 @@ describe("startDockerServer configuration and startup", () => {
     expect(harness.cleanup.start).toHaveBeenCalledTimes(1);
     expect(harness.dependencies.listen).toHaveBeenCalledTimes(1);
     expect(harness.logger.info).toHaveBeenCalledWith("server_ready", {
-      backendType: "sqlite",
+      backendType: "d1",
       port: 8080,
     });
     expect(harness.signalHandlers.has("SIGTERM")).toBe(true);
     expect(harness.signalHandlers.has("SIGINT")).toBe(true);
+    expect(vi.mocked(harness.logger.info).mock.calls.filter(([event]) => (
+      event === "server_start" || event === "server_ready"
+    ))).toEqual([
+      ["server_start", { backendType: "d1", port: 8080, intervalMs: CLEANUP_INTERVAL_MS }],
+      ["server_ready", { backendType: "d1", port: 8080 }],
+    ]);
+  });
+
+  it("records d1_unavailable when the selected backend is Postgres", async () => {
+    const harness = createHarness();
+    harness.dependencies.createBackend = vi.fn(async () => ({
+      backend: harness.backend,
+      backendType: "postgres" as const,
+      ttlSeconds: 60,
+      maxActiveLinks: undefined,
+    }));
+
+    await startDockerServer({ env: VALID_ENV, dependencies: harness.dependencies });
+
+    expect(harness.logger.info).toHaveBeenCalledWith("server_start", {
+      backendType: "postgres",
+      port: 8080,
+      intervalMs: CLEANUP_INTERVAL_MS,
+      reason: "d1_unavailable",
+    });
+    expect(harness.logger.info).toHaveBeenCalledWith("server_ready", {
+      backendType: "postgres",
+      port: 8080,
+      reason: "d1_unavailable",
+    });
   });
 
   it("registers graceful signal handling as soon as the listener is created", async () => {

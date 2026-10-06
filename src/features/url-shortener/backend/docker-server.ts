@@ -4,10 +4,10 @@ import type { Context } from "hono";
 import type { GetConnInfo } from "hono/conninfo";
 import { pathToFileURL } from "node:url";
 import {
-  createShortLinkBackend,
+  selectShortLinkBackend,
   type BackendEnvironment,
   type BackendSelection,
-} from "./backend-factory";
+} from "../../../server/short-links/backend-selector.ts";
 import {
   createCleanupController,
   type CleanupController,
@@ -38,7 +38,7 @@ export interface RuntimeListener {
 }
 
 export interface DockerServerDependencies {
-  createBackend(env: BackendEnvironment): BackendSelection;
+  createBackend(env: BackendEnvironment): Promise<BackendSelection>;
   createCleanup(options: {
     backend: BackendSelection["backend"];
     logger: AppLogger;
@@ -66,7 +66,7 @@ export interface DockerServerRuntime {
 }
 
 const defaultDependencies: DockerServerDependencies = {
-  createBackend: createShortLinkBackend,
+  createBackend: selectShortLinkBackend,
   createCleanup: createCleanupController,
   createApp: createPublicApp,
   createLimiter: createRateLimiter,
@@ -111,7 +111,11 @@ export async function startDockerServer(options: {
   const publicBaseUrl = validatePublicBaseUrl(env.PUBLIC_BASE_URL, env.NODE_ENV);
   const trustProxy = parseTrustProxy(env.TRUST_PROXY);
   const rateLimitRules = parseRateLimitRules(env);
-  const selection = dependencies.createBackend(env);
+  const selection = await dependencies.createBackend(env);
+  const startupFields = {
+    backendType: selection.backendType,
+    ...(selection.backendType === "postgres" ? { reason: "d1_unavailable" as const } : {}),
+  };
   const cleanup = dependencies.createCleanup({
     backend: selection.backend,
     logger: dependencies.logger,
@@ -133,7 +137,7 @@ export async function startDockerServer(options: {
   });
 
   dependencies.logger.info("server_start", {
-    backendType: selection.backendType,
+    ...startupFields,
     port: PORT,
     intervalMs: CLEANUP_INTERVAL_MS,
   });
@@ -220,7 +224,7 @@ export async function startDockerServer(options: {
 
   if (!shutdownStarted) {
     dependencies.logger.info("server_ready", {
-      backendType: selection.backendType,
+      ...startupFields,
       port: PORT,
     });
   }
