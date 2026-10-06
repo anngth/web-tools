@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ShortLinkError } from "../../../shared/short-links/model.ts";
+import { ShortLinkError } from "../../shared/short-links/model.ts";
 import { D1GatewayClient } from "./d1-gateway-client";
 
 const NOW = new Date("2026-07-12T03:04:05.006Z");
@@ -206,5 +206,36 @@ describe("D1GatewayClient", () => {
     const thrown = await client.stats("docs", NOW).catch((error: unknown) => error);
     expect(thrown).toBeInstanceOf(Error);
     expect(String((thrown as Error).stack ?? thrown)).not.toContain("raw-secret");
+  });
+
+  it("accepts only the exact health object", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ ok: true }));
+    const client = makeClient(fetchMock);
+    await expect(client.probe()).resolves.toBe(true);
+    expect(String(fetchMock.mock.calls[0][0])).toBe(
+      "https://gateway.example.test/root/internal/health",
+    );
+    expect(fetchMock.mock.calls[0][1]?.method).toBe("GET");
+  });
+
+  it.each([401, 403, 500, 502])("returns false for status %i", async (status) => {
+    const client = makeClient(vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ ok: true }, status)));
+    await expect(client.probe()).resolves.toBe(false);
+  });
+
+  it.each([
+    [{ ok: true, extra: 1 }],
+    [{ ok: false }],
+    [],
+  ])("rejects health body %j", async (body) => {
+    const client = makeClient(vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(body)));
+    await expect(client.probe()).resolves.toBe(false);
+  });
+
+  it("returns false when the probe times out", async () => {
+    const client = makeClient(vi.fn<typeof fetch>().mockRejectedValue(
+      new DOMException("timed out", "TimeoutError"),
+    ));
+    await expect(client.probe()).resolves.toBe(false);
   });
 });

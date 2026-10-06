@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { D1GatewayClient } from "./d1-gateway-client";
+import { D1GatewayClient } from "../../../server/short-links/d1-gateway-client.ts";
 import { createShortLinkBackend } from "./backend-factory";
 import { LocalShortLinkBackend } from "../../../shared/short-links/local-backend.ts";
 

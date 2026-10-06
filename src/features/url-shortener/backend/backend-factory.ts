@@ -1,6 +1,6 @@
 import { validateTtlSeconds } from "../../../shared/short-links/validation.ts";
 import { parseMaxActiveLinks, type MaxActiveLinksEnvironment } from "./limits-config";
-import { D1GatewayClient } from "./d1-gateway-client";
+import { D1GatewayClient } from "../../../server/short-links/d1-gateway-client.ts";
 import { LocalShortLinkBackend } from "../../../shared/short-links/local-backend.ts";
 import type { ShortLinkBackend } from "../../../shared/short-links/short-link-backend.ts";
 import { SqliteShortLinkStore } from "./sqlite-store";

@@ -3,8 +3,8 @@ import {
   type CreateShortLinkInput,
   type ShortLinkPublic,
   type ShortLinkStats,
-} from "../../../shared/short-links/model.ts";
-import type { ShortLinkBackend } from "../../../shared/short-links/short-link-backend.ts";
+} from "../../shared/short-links/model.ts";
+import type { ShortLinkBackend } from "../../shared/short-links/short-link-backend.ts";
 
 const MAX_GATEWAY_RESPONSE_BYTES = 16 * 1024;
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -234,6 +234,25 @@ export class D1GatewayClient implements ShortLinkBackend {
     });
     if (response.status !== 200) throw gatewayError();
     return parseDeletedCount(await readLimitedJson(response));
+  }
+
+  async probe(): Promise<boolean> {
+    try {
+      const response = await this.fetchImpl(`${this.baseUrl.toString()}internal/health`, {
+        method: "GET",
+        headers: {
+          authorization: `Bearer ${this.token}`,
+          ...JSON_HEADERS,
+        },
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+      if (response.status !== 200) return false;
+      const body = await readLimitedJson(response);
+      const record = asRecord(body);
+      return record !== undefined && hasExactKeys(record, ["ok"]) && record.ok === true;
+    } catch {
+      return false;
+    }
   }
 
   private requestWithNow(path: string, now: Date): Promise<Response> {
