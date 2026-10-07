@@ -120,6 +120,8 @@ describe("startDockerServer configuration and startup", () => {
     ["invalid PUBLIC_BASE_URL", { ...VALID_ENV, PUBLIC_BASE_URL: "https://sho.rt/path" }, "public_base_url_invalid"],
     ["invalid TRUST_PROXY", { ...VALID_ENV, TRUST_PROXY: "yes" }, "trust_proxy_invalid"],
     ["invalid RATE_LIMIT_PER_HOUR", { ...VALID_ENV, RATE_LIMIT_PER_HOUR: "lots" }, "rate_limit_invalid"],
+    ["invalid CLEANUP_INTERVAL_SECONDS", { ...VALID_ENV, CLEANUP_INTERVAL_SECONDS: "0" }, "cleanup_interval_invalid"],
+    ["invalid CLEANUP_INTERVAL_SECONDS word", { ...VALID_ENV, CLEANUP_INTERVAL_SECONDS: "soon" }, "cleanup_interval_invalid"],
     ["all rate limit windows disabled", {
       ...VALID_ENV,
       RATE_LIMIT_PER_MINUTE: "0",
@@ -174,27 +176,17 @@ describe("startDockerServer configuration and startup", () => {
     });
   });
 
-  it("awaits startup cleanup before scheduling, listening, or logging readiness", async () => {
-    const startupCleanup = deferred<void>();
+  it("starts the five-minute cleanup schedule without a startup cleanup", async () => {
     const harness = createHarness();
-    vi.mocked(harness.cleanup.run).mockReturnValue(startupCleanup.promise);
 
-    const starting = startDockerServer({ env: VALID_ENV, dependencies: harness.dependencies });
-    await Promise.resolve();
+    await startDockerServer({ env: VALID_ENV, dependencies: harness.dependencies });
 
-    expect(harness.cleanup.run).toHaveBeenCalledWith("startup");
-    expect(harness.cleanup.start).not.toHaveBeenCalled();
-    expect(harness.dependencies.listen).not.toHaveBeenCalled();
-    expect(harness.logger.info).toHaveBeenCalledWith("server_start", {
-      backendType: "d1",
-      port: 8080,
+    expect(harness.cleanup.run).not.toHaveBeenCalled();
+    expect(harness.dependencies.createCleanup).toHaveBeenCalledWith({
+      backend: harness.backend,
+      logger: harness.logger,
       intervalMs: CLEANUP_INTERVAL_MS,
     });
-    expect(harness.logger.info).not.toHaveBeenCalledWith("server_ready", expect.anything());
-
-    startupCleanup.resolve();
-    await starting;
-
     expect(harness.cleanup.start).toHaveBeenCalledTimes(1);
     expect(harness.dependencies.listen).toHaveBeenCalledTimes(1);
     expect(harness.logger.info).toHaveBeenCalledWith("server_ready", {
@@ -209,6 +201,26 @@ describe("startDockerServer configuration and startup", () => {
       ["server_start", { backendType: "d1", port: 8080, intervalMs: CLEANUP_INTERVAL_MS }],
       ["server_ready", { backendType: "d1", port: 8080 }],
     ]);
+  });
+
+  it("uses CLEANUP_INTERVAL_SECONDS when it is set", async () => {
+    const harness = createHarness();
+
+    await startDockerServer({
+      env: { ...VALID_ENV, CLEANUP_INTERVAL_SECONDS: "120" },
+      dependencies: harness.dependencies,
+    });
+
+    expect(harness.dependencies.createCleanup).toHaveBeenCalledWith({
+      backend: harness.backend,
+      logger: harness.logger,
+      intervalMs: 120_000,
+    });
+    expect(harness.logger.info).toHaveBeenCalledWith("server_start", {
+      backendType: "d1",
+      port: 8080,
+      intervalMs: 120_000,
+    });
   });
 
   it("records d1_unavailable when the selected backend is Postgres", async () => {

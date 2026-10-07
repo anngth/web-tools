@@ -9,7 +9,9 @@ import {
   type BackendSelection,
 } from "./short-links/backend-selector.ts";
 import {
+  CLEANUP_INTERVAL_MS,
   createCleanupController,
+  parseCleanupIntervalMs,
   type CleanupController,
 } from "./http/cleanup-scheduler";
 import { createJsonLogger, type AppLogger } from "./http/logger";
@@ -18,7 +20,7 @@ import { parseRateLimitRules, type RateLimitEnvironment } from "./http/limits-co
 import { createRateLimiter, resolveClientKey } from "./http/rate-limiter";
 import { StartupFailure, startupFailureReason } from "./startup-failure.ts";
 
-export const CLEANUP_INTERVAL_MS = 300_000 as const;
+export { CLEANUP_INTERVAL_MS };
 export const SHUTDOWN_TIMEOUT_MS = 10_000 as const;
 const PORT = 8080 as const;
 const HOSTNAME = "0.0.0.0";
@@ -29,6 +31,7 @@ interface DockerServerEnvironment
   NODE_ENV?: string;
   PUBLIC_BASE_URL?: string;
   TRUST_PROXY?: string;
+  CLEANUP_INTERVAL_SECONDS?: string;
 }
 
 export interface RuntimeListener {
@@ -43,6 +46,7 @@ export interface DockerServerDependencies {
   createCleanup(options: {
     backend: BackendSelection["backend"];
     logger: AppLogger;
+    intervalMs: number;
   }): CleanupController;
   createApp: typeof createPublicApp;
   createLimiter: typeof createRateLimiter;
@@ -117,6 +121,12 @@ export async function startDockerServer(options: {
   } catch {
     throw new StartupFailure("rate_limit_invalid");
   }
+  let cleanupIntervalMs: number;
+  try {
+    cleanupIntervalMs = parseCleanupIntervalMs(env.CLEANUP_INTERVAL_SECONDS);
+  } catch {
+    throw new StartupFailure("cleanup_interval_invalid");
+  }
   const selection = await dependencies.createBackend(env);
   const startupFields = {
     backendType: selection.backendType,
@@ -125,6 +135,7 @@ export async function startDockerServer(options: {
   const cleanup = dependencies.createCleanup({
     backend: selection.backend,
     logger: dependencies.logger,
+    intervalMs: cleanupIntervalMs,
   });
   const limiter = dependencies.createLimiter({
     rules: rateLimitRules,
@@ -145,14 +156,8 @@ export async function startDockerServer(options: {
   dependencies.logger.info("server_start", {
     ...startupFields,
     port: PORT,
-    intervalMs: CLEANUP_INTERVAL_MS,
+    intervalMs: cleanupIntervalMs,
   });
-  try {
-    await cleanup.run("startup");
-  } catch (error) {
-    if (error instanceof StartupFailure) throw error;
-    throw new StartupFailure("startup_cleanup_failed");
-  }
   cleanup.start();
 
   let listener!: RuntimeListener;

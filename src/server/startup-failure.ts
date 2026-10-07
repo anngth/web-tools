@@ -3,6 +3,7 @@ export type StartupFailureReason =
   | "public_base_url_invalid"
   | "trust_proxy_invalid"
   | "rate_limit_invalid"
+  | "cleanup_interval_invalid"
   | "ttl_invalid"
   | "max_active_links_invalid"
   | "database_url_invalid"
@@ -10,7 +11,6 @@ export type StartupFailureReason =
   | "postgres_authentication_failed"
   | "postgres_database_missing"
   | "postgres_open_failed"
-  | "startup_cleanup_failed"
   | "listen_failed";
 
 const GENERIC_MESSAGE = "Invalid short link backend configuration";
@@ -20,6 +20,7 @@ const MESSAGES: Record<StartupFailureReason, string> = {
   public_base_url_invalid: "PUBLIC_BASE_URL configuration is invalid",
   trust_proxy_invalid: "TRUST_PROXY configuration is invalid",
   rate_limit_invalid: "RATE_LIMIT configuration is invalid",
+  cleanup_interval_invalid: "CLEANUP_INTERVAL_SECONDS configuration is invalid",
   ttl_invalid: GENERIC_MESSAGE,
   max_active_links_invalid: GENERIC_MESSAGE,
   database_url_invalid: GENERIC_MESSAGE,
@@ -27,7 +28,6 @@ const MESSAGES: Record<StartupFailureReason, string> = {
   postgres_authentication_failed: GENERIC_MESSAGE,
   postgres_database_missing: GENERIC_MESSAGE,
   postgres_open_failed: GENERIC_MESSAGE,
-  startup_cleanup_failed: "Startup cleanup failed",
   listen_failed: "Server failed to listen",
 };
 

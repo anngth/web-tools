@@ -1,7 +1,8 @@
 import type { AppLogger } from "./logger";
 import type { ShortLinkBackend } from "../../shared/short-links/short-link-backend.ts";
 
-const CLEANUP_INTERVAL_MS = 300_000 as const;
+export const CLEANUP_INTERVAL_MS = 300_000;
+const MAX_CLEANUP_INTERVAL_MS = 2_147_483_647;
 
 type CleanupTrigger = "startup" | "scheduled";
 
@@ -16,7 +17,7 @@ export function createCleanupController(options: {
   backend: ShortLinkBackend;
   logger: AppLogger;
   now?: () => Date;
-  intervalMs?: 300_000;
+  intervalMs?: number;
   setIntervalFn?: typeof setInterval;
   clearIntervalFn?: typeof clearInterval;
 }): CleanupController {
@@ -83,4 +84,25 @@ export function createCleanupController(options: {
       return active ?? Promise.resolve();
     },
   };
+}
+
+export function parseCleanupIntervalMs(value: string | undefined): number {
+  const trimmed = value?.trim() ?? "";
+  if (trimmed === "") return CLEANUP_INTERVAL_MS;
+  if (!/^\d+$/.test(trimmed)) {
+    throw new TypeError("CLEANUP_INTERVAL_SECONDS configuration is invalid");
+  }
+
+  const seconds = Number(trimmed);
+  const intervalMs = seconds * 1_000;
+  if (
+    !Number.isSafeInteger(seconds) ||
+    seconds <= 0 ||
+    !Number.isSafeInteger(intervalMs) ||
+    intervalMs > MAX_CLEANUP_INTERVAL_MS
+  ) {
+    throw new TypeError("CLEANUP_INTERVAL_SECONDS configuration is invalid");
+  }
+
+  return intervalMs;
 }

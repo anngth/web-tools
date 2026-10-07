@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppLogger } from "./logger";
 import type { ShortLinkBackend } from "../../shared/short-links/short-link-backend.ts";
-import { createCleanupController } from "./cleanup-scheduler";
+import { createCleanupController, parseCleanupIntervalMs } from "./cleanup-scheduler";
 
 const START = new Date("2026-07-12T00:00:00.000Z");
 
@@ -20,6 +20,26 @@ function makeDependencies(deleteExpired = vi.fn<ShortLinkBackend["deleteExpired"
   const logger: AppLogger = { info: vi.fn(), error: vi.fn() };
   return { backend, deleteExpired, logger };
 }
+
+describe("parseCleanupIntervalMs", () => {
+  it("defaults a missing or blank value to five minutes", () => {
+    expect(parseCleanupIntervalMs(undefined)).toBe(300_000);
+    expect(parseCleanupIntervalMs("")).toBe(300_000);
+    expect(parseCleanupIntervalMs("   ")).toBe(300_000);
+  });
+
+  it("converts a positive whole number of seconds to milliseconds", () => {
+    expect(parseCleanupIntervalMs("120")).toBe(120_000);
+    expect(parseCleanupIntervalMs("  45 ")).toBe(45_000);
+  });
+
+  it.each(["0", "soon", "1.5", "-5", "2147484"])(
+    "rejects %s",
+    (value) => {
+      expect(() => parseCleanupIntervalMs(value)).toThrow(TypeError);
+    },
+  );
+});
 
 describe("createCleanupController", () => {
   beforeEach(() => {
