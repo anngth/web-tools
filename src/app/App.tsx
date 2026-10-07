@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "./layout/AppShell";
+import { useSidebarBand } from "./layout/useSidebarBand";
 import {
   canonicalPathname,
   pathnameForTool,
@@ -15,6 +16,7 @@ export function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const layoutBand = useSidebarBand();
 
   const activeTool = tools.find((tool) => tool.id === activeToolId) ?? tools[0];
   const ActivePage = activeTool.Page;
@@ -52,6 +54,7 @@ export function App() {
     <AppShell
       activeTool={activeTool}
       darkMode={darkMode}
+      layoutBand={layoutBand}
       sidebarCollapsed={sidebarCollapsed}
       sidebarOpen={sidebarOpen}
       tools={tools}

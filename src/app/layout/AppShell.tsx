@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
-import { Moon, Sun } from "lucide-react";
 import type { ToolDefinition, ToolId } from "../toolRegistry";
 import { PageHeader } from "./PageHeader";
 import { Sidebar } from "./Sidebar";
+import type { SidebarBand } from "./useSidebarBand";
 
 interface AppShellProps {
   activeTool: ToolDefinition;
   children: ReactNode;
   darkMode: boolean;
+  layoutBand: SidebarBand;
   sidebarCollapsed: boolean;
   sidebarOpen: boolean;
   tools: ToolDefinition[];
@@ -22,6 +23,7 @@ export function AppShell({
   activeTool,
   children,
   darkMode,
+  layoutBand,
   sidebarCollapsed,
   sidebarOpen,
   tools,
@@ -31,37 +33,38 @@ export function AppShell({
   onToggleDarkMode,
   onToggleSidebarCollapsed,
 }: AppShellProps) {
+  const isCollapsed =
+    layoutBand === "rail" || (layoutBand === "expanded" && sidebarCollapsed);
+  const className = [
+    "app",
+    darkMode ? "dark" : "",
+    `layout-${layoutBand}`,
+    layoutBand === "expanded" && sidebarCollapsed ? "sidebarCollapsed" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <main
-      className={`app ${darkMode ? "dark" : ""} ${sidebarCollapsed ? "sidebarCollapsed" : ""}`}
-    >
+    <main className={className}>
       <Sidebar
         activeToolId={activeTool.id}
-        darkMode={darkMode}
-        isCollapsed={sidebarCollapsed}
+        isCollapsed={isCollapsed}
         isOpen={sidebarOpen}
+        showCollapseButton={layoutBand === "expanded"}
         tools={tools}
         onClose={onCloseSidebar}
         onSelectTool={onSelectTool}
         onToggleCollapsed={onToggleSidebarCollapsed}
-        onToggleDarkMode={onToggleDarkMode}
       />
-
-      <button
-        className="fixedThemeToggle mobileOnly"
-        type="button"
-        onClick={onToggleDarkMode}
-        aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-        title={darkMode ? "Light mode" : "Dark mode"}
-      >
-        {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-      </button>
 
       <section className="shell" aria-labelledby="page-title">
         <PageHeader
           activeTool={activeTool}
+          darkMode={darkMode}
           isSidebarOpen={sidebarOpen}
+          showMenuButton={layoutBand === "drawer"}
           onOpenSidebar={onOpenSidebar}
+          onToggleDarkMode={onToggleDarkMode}
         />
         {children}
       </section>

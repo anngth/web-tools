@@ -1,35 +1,26 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  Moon,
-  Sun,
-  Wrench,
-  X,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Wrench, X } from "lucide-react";
 import type { ToolDefinition, ToolId } from "../toolRegistry";
 
 interface SidebarProps {
   activeToolId: ToolId;
-  darkMode: boolean;
   isCollapsed: boolean;
   isOpen: boolean;
+  showCollapseButton: boolean;
   tools: ToolDefinition[];
   onClose: () => void;
   onSelectTool: (toolId: ToolId) => void;
   onToggleCollapsed: () => void;
-  onToggleDarkMode: () => void;
 }
 
 export function Sidebar({
   activeToolId,
-  darkMode,
   isCollapsed,
   isOpen,
+  showCollapseButton,
   tools,
   onClose,
   onSelectTool,
   onToggleCollapsed,
-  onToggleDarkMode,
 }: SidebarProps) {
   return (
     <>
@@ -50,16 +41,6 @@ export function Sidebar({
           </div>
 
           <button
-            className="sidebarThemeToggle"
-            type="button"
-            onClick={onToggleDarkMode}
-            aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-            title={darkMode ? "Light mode" : "Dark mode"}
-          >
-            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-
-          <button
             className="sidebarCloseButton"
             type="button"
             onClick={onClose}
@@ -68,19 +49,21 @@ export function Sidebar({
             <X size={20} />
           </button>
 
-          <button
-            className="sidebarCollapseButton"
-            type="button"
-            onClick={onToggleCollapsed}
-            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {isCollapsed ? (
-              <ChevronRight size={18} />
-            ) : (
-              <ChevronLeft size={18} />
-            )}
-          </button>
+          {showCollapseButton && (
+            <button
+              className="sidebarCollapseButton"
+              type="button"
+              onClick={onToggleCollapsed}
+              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {isCollapsed ? (
+                <ChevronRight size={18} />
+              ) : (
+                <ChevronLeft size={18} />
+              )}
+            </button>
+          )}
         </div>
 
         <nav className="sidebarNav" aria-label="Main navigation">
@@ -94,6 +77,7 @@ export function Sidebar({
                 className={isActive ? "sidebarNavItem active" : "sidebarNavItem"}
                 type="button"
                 title={isCollapsed ? tool.label : undefined}
+                aria-label={tool.label}
                 aria-current={isActive ? "page" : undefined}
                 onClick={() => onSelectTool(tool.id)}
               >
