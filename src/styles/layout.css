@@ -1,5 +1,5 @@
 .app {
-  align-items: center;
+  align-items: flex-start;
   background:
     linear-gradient(135deg, rgba(15, 118, 110, 0.12), transparent 38%),
     var(--bg);
@@ -28,7 +28,7 @@
 
 .shell {
   margin: 0 auto;
-  max-width: 560px;
+  max-width: 720px;
   padding: 0 var(--spacing-lg);
   width: 100%;
 }
