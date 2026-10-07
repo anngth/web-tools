@@ -18,7 +18,9 @@ npm run be:dev
 
 ## Docs
 
-- [TOTP](docs/totp.md)
-- [URL shortener](docs/url-shortener.md)
-- [Development](docs/development.md)
+Read these before exploring the tree:
+
+- [Project overview](docs/project-overview-prd.md)
+- [System architecture](docs/system-architecture.md)
+- [Code standards](docs/code-standards.md)
 - [Server operations](docs/server-operations.md)
