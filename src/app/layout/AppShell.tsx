@@ -48,6 +48,7 @@ export function AppShell({
     <main className={className}>
       <Sidebar
         activeToolId={activeTool.id}
+        darkMode={darkMode}
         isCollapsed={isCollapsed}
         isOpen={sidebarOpen}
         showCollapseButton={layoutBand === "expanded"}
@@ -55,16 +56,15 @@ export function AppShell({
         onClose={onCloseSidebar}
         onSelectTool={onSelectTool}
         onToggleCollapsed={onToggleSidebarCollapsed}
+        onToggleDarkMode={onToggleDarkMode}
       />
 
       <section className="shell" aria-labelledby="page-title">
         <PageHeader
           activeTool={activeTool}
-          darkMode={darkMode}
           isSidebarOpen={sidebarOpen}
           showMenuButton={layoutBand === "drawer"}
           onOpenSidebar={onOpenSidebar}
-          onToggleDarkMode={onToggleDarkMode}
         />
         {children}
       </section>

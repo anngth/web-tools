@@ -1,22 +1,18 @@
-import { Menu, Moon, Sun } from "lucide-react";
+import { Menu } from "lucide-react";
 import type { ToolDefinition } from "../toolRegistry";
 
 interface PageHeaderProps {
   activeTool: ToolDefinition;
-  darkMode: boolean;
   isSidebarOpen: boolean;
   showMenuButton: boolean;
   onOpenSidebar: () => void;
-  onToggleDarkMode: () => void;
 }
 
 export function PageHeader({
   activeTool,
-  darkMode,
   isSidebarOpen,
   showMenuButton,
   onOpenSidebar,
-  onToggleDarkMode,
 }: PageHeaderProps) {
   const { Icon } = activeTool;
 
@@ -43,15 +39,6 @@ export function PageHeader({
           <p>{activeTool.description}</p>
         </div>
       </div>
-      <button
-        className="themeToggle"
-        type="button"
-        onClick={onToggleDarkMode}
-        aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-        title={darkMode ? "Light mode" : "Dark mode"}
-      >
-        {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-      </button>
     </header>
   );
 }

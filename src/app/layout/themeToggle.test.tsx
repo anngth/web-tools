@@ -20,18 +20,36 @@ describe("theme toggle", () => {
     setViewportWidth(1024);
   });
 
-  it("keeps a single theme button in the page header at every width", () => {
-    for (const width of [1200, 800, 500]) {
-      setViewportWidth(width);
-      const { unmount } = render(<App />);
+  it("places the theme button beside the sidebar title when expanded", () => {
+    setViewportWidth(1200);
+    render(<App />);
 
-      const buttons = screen.getAllByRole("button", { name: "Switch to dark mode" });
-      expect(buttons).toHaveLength(1);
-      expect(buttons[0].closest("header")).not.toBeNull();
-      expect(document.getElementById("sidebar")?.contains(buttons[0])).toBe(false);
+    const button = screen.getByRole("button", { name: "Switch to dark mode" });
+    expect(button.closest(".sidebarBrand")).not.toBeNull();
+    expect(button.closest(".sidebarFooter")).toBeNull();
+    expect(button.querySelector("span")).toBeNull();
+  });
 
-      unmount();
-    }
+  it("keeps the drawer theme button with the brand, not flush against close", () => {
+    setViewportWidth(500);
+    render(<App />);
+
+    const buttons = screen.getAllByRole("button", { name: "Switch to dark mode" });
+    expect(buttons).toHaveLength(1);
+    const theme = buttons[0];
+    const close = screen.getByRole("button", { name: "Close sidebar" });
+    expect(theme.closest(".sidebarBrand")).not.toBeNull();
+    expect(close.closest(".sidebarBrand")).toBeNull();
+  });
+
+  it("places a compact theme button in the sidebar footer when collapsed to rail", () => {
+    setViewportWidth(800);
+    render(<App />);
+
+    const button = screen.getByRole("button", { name: "Switch to dark mode" });
+    expect(document.getElementById("sidebar")).toHaveClass("collapsed");
+    expect(button.closest(".sidebarFooter")).not.toBeNull();
+    expect(button.closest(".sidebarHeader")).toBeNull();
   });
 
   it("switches the page between dark and light from that button", async () => {

@@ -1,8 +1,9 @@
-import { ChevronLeft, ChevronRight, Wrench, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Moon, Sun, Wrench, X } from "lucide-react";
 import type { ToolDefinition, ToolId } from "../toolRegistry";
 
 interface SidebarProps {
   activeToolId: ToolId;
+  darkMode: boolean;
   isCollapsed: boolean;
   isOpen: boolean;
   showCollapseButton: boolean;
@@ -10,10 +11,12 @@ interface SidebarProps {
   onClose: () => void;
   onSelectTool: (toolId: ToolId) => void;
   onToggleCollapsed: () => void;
+  onToggleDarkMode: () => void;
 }
 
 export function Sidebar({
   activeToolId,
+  darkMode,
   isCollapsed,
   isOpen,
   showCollapseButton,
@@ -21,6 +24,7 @@ export function Sidebar({
   onClose,
   onSelectTool,
   onToggleCollapsed,
+  onToggleDarkMode,
 }: SidebarProps) {
   return (
     <>
@@ -38,6 +42,17 @@ export function Sidebar({
               <Wrench size={20} />
             </span>
             {!isCollapsed && <span className="sidebarBrandText">Web Tools</span>}
+            {!isCollapsed && (
+              <button
+                className="themeToggle"
+                type="button"
+                onClick={onToggleDarkMode}
+                aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                title={darkMode ? "Light mode" : "Dark mode"}
+              >
+                {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+            )}
           </div>
 
           <button
@@ -88,7 +103,19 @@ export function Sidebar({
           })}
         </nav>
 
-        <div className="sidebarFooter" />
+        {isCollapsed && (
+          <div className="sidebarFooter">
+            <button
+              className="themeToggle"
+              type="button"
+              onClick={onToggleDarkMode}
+              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+              title={darkMode ? "Light mode" : "Dark mode"}
+            >
+              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+          </div>
+        )}
       </aside>
     </>
   );
