@@ -27,4 +27,12 @@ describe("tool column", () => {
     expect(getComputedStyle(app).alignItems).toBe("flex-start");
     expect(getComputedStyle(shell).maxWidth).toBe("720px");
   });
+
+  it("lets the URL shortener column grow past the default tool width", () => {
+    const shell = document.createElement("section");
+    shell.className = "shell shellWide";
+    document.body.append(shell);
+
+    expect(getComputedStyle(shell).maxWidth).toBe("1080px");
+  });
 });

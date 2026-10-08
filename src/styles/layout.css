@@ -33,6 +33,10 @@
   width: 100%;
 }
 
+.shell.shellWide {
+  max-width: 1080px;
+}
+
 .sidebar {
   background: var(--surface);
   border-right: 1px solid var(--border);

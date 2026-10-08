@@ -29,6 +29,14 @@ function formatLastClick(value: string | null): string {
   }).format(new Date(value));
 }
 
+const COPY_FEEDBACK_MS = 2_000;
+
+type CopyField = "destination" | "short";
+
+function copiedFieldKey(slug: string, field: CopyField): string {
+  return `${field}\u0000${slug}`;
+}
+
 type LinkIdentity = Pick<CreatedShortLink, "slug" | "createdAt">;
 
 function identityKey(identity: LinkIdentity): string {
@@ -50,7 +58,8 @@ export function UrlShortenerPage() {
   const [refreshingLinks, setRefreshingLinks] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
-  const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const copiedResetTimeoutRef = useRef<number | null>(null);
   const [error, setError] = useState("");
   const [serviceState, setServiceState] = useState<
     "checking" | "unavailable" | "ready"
@@ -151,7 +160,8 @@ export function UrlShortenerPage() {
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCreating(true);
-    setCopiedSlug(null);
+    clearCopiedFeedback();
+    setCopiedKey(null);
     setError("");
 
     const input = {
@@ -176,30 +186,52 @@ export function UrlShortenerPage() {
     }
   }
 
-  async function handleCopy(link: CreatedShortLink) {
-    setCopiedSlug(null);
+  function clearCopiedFeedback() {
+    if (copiedResetTimeoutRef.current !== null) {
+      window.clearTimeout(copiedResetTimeoutRef.current);
+      copiedResetTimeoutRef.current = null;
+    }
+  }
+
+  useEffect(() => clearCopiedFeedback, []);
+
+  async function handleCopy(link: CreatedShortLink, field: CopyField) {
+    const value = field === "short" ? link.shortUrl : link.destinationUrl;
+    const key = copiedFieldKey(link.slug, field);
+    clearCopiedFeedback();
+    setCopiedKey(null);
     setError("");
-    if (await copyTextToClipboard(link.shortUrl)) {
-      setCopiedSlug(link.slug);
+    if (await copyTextToClipboard(value)) {
+      setCopiedKey(key);
+      copiedResetTimeoutRef.current = window.setTimeout(() => {
+        copiedResetTimeoutRef.current = null;
+        setCopiedKey((current) => (current === key ? null : current));
+      }, COPY_FEEDBACK_MS);
       return;
     }
     setError(
-      "Could not copy the short URL. Check clipboard permission and try again.",
+      field === "short"
+        ? "Could not copy the short URL. Check clipboard permission and try again."
+        : "Could not copy the destination URL. Check clipboard permission and try again.",
     );
   }
 
   function clearForm() {
     setDestinationUrl("");
     setCustomAlias("");
-    setCopiedSlug(null);
+    clearCopiedFeedback();
+    setCopiedKey(null);
     setError("");
     destinationInputRef.current?.focus();
   }
 
+  const showSession =
+    serviceState === "ready" || links.length > 0;
+
   return (
-    <div className="panel urlShortener">
+    <div className="urlShortener">
       {serviceState !== "ready" && (
-        <section className="urlShortenerNotice" role="status">
+        <section className="panel urlShortenerNotice" role="status">
           <p>
             {serviceState === "checking"
               ? "Checking the short-link service…"
@@ -216,140 +248,189 @@ export function UrlShortenerPage() {
           )}
         </section>
       )}
-      {serviceState === "ready" && (
-      <form
-        className="urlShortenerForm"
-        aria-label="Create short link"
-        onSubmit={handleCreate}
-      >
-        <label className="field" htmlFor="short-link-destination">
-          <span>Destination URL</span>
-          <input
-            ref={destinationInputRef}
-            id="short-link-destination"
-            type="url"
-            inputMode="url"
-            autoCapitalize="none"
-            autoComplete="url"
-            autoCorrect="off"
-            spellCheck="false"
-            placeholder="https://example.com/a/long/destination"
-            required
-            value={destinationUrl}
-            aria-describedby="short-link-help short-link-error"
-            onChange={(event) => setDestinationUrl(event.target.value)}
-          />
-        </label>
-        <label className="field" htmlFor="short-link-alias">
-          <span>Custom alias (optional)</span>
-          <input
-            id="short-link-alias"
-            type="text"
-            autoCapitalize="none"
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck="false"
-            placeholder="release-notes"
-            value={customAlias}
-            aria-describedby="short-link-help short-link-error"
-            onChange={(event) => setCustomAlias(event.target.value)}
-          />
-        </label>
-        <p id="short-link-help" className="helpText urlShortenerHelp">
-          Links expire automatically. Use 3–48 lowercase letters, numbers, or
-          hyphens for an alias.
-        </p>
-        <p
-          id="short-link-error"
-          className={error ? "errorText" : "errorText isHidden"}
-          role="alert"
-          aria-live="polite"
-        >
-          {error || " "}
-        </p>
-        <div className="urlShortenerFormActions">
-          <button className="urlShortenerPrimary" type="submit" disabled={creating}>
-            {creating ? "Creating…" : "Create short link"}
-          </button>
-          <button
-            className="urlShortenerSecondary"
-            type="button"
-            onClick={clearForm}
-            disabled={creating || (!destinationUrl && !customAlias)}
-          >
-            Clear form
-          </button>
-        </div>
-      </form>
-      )}
-
-      {links.length > 0 && (
-        <section className="urlShortenerResults" aria-labelledby="created-links-heading">
-          <h2 id="created-links-heading">Created this session</h2>
-          <div className="urlShortenerResultList">
-            {links.map((link) => {
-              const isRefreshing = refreshingLinks.has(identityKey(link));
-              const isCopied = copiedSlug === link.slug;
-              return (
-                <article
-                  key={identityKey(link)}
-                  className="urlShortenerRelay"
-                  aria-label={`Short link ${link.slug}`}
+      <div className="urlShortenerWorkspace">
+        {serviceState === "ready" && (
+          <div className="panel urlShortenerComposer">
+            <form
+              className="urlShortenerForm"
+              aria-label="Create short link"
+              onSubmit={handleCreate}
+            >
+              <label className="field" htmlFor="short-link-destination">
+                <span>Destination URL</span>
+                <input
+                  ref={destinationInputRef}
+                  id="short-link-destination"
+                  type="url"
+                  inputMode="url"
+                  autoCapitalize="none"
+                  autoComplete="url"
+                  autoCorrect="off"
+                  spellCheck="false"
+                  placeholder="https://example.com/a/long/destination"
+                  required
+                  value={destinationUrl}
+                  aria-describedby="short-link-help short-link-error"
+                  onChange={(event) => setDestinationUrl(event.target.value)}
+                />
+              </label>
+              <label className="field" htmlFor="short-link-alias">
+                <span>Custom alias (optional)</span>
+                <input
+                  id="short-link-alias"
+                  type="text"
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck="false"
+                  placeholder="release-notes"
+                  value={customAlias}
+                  aria-describedby="short-link-help short-link-error"
+                  onChange={(event) => setCustomAlias(event.target.value)}
+                />
+              </label>
+              <p
+                id="short-link-error"
+                className={error ? "errorText" : "errorText isHidden"}
+                role="alert"
+                aria-live="polite"
+              >
+                {error || " "}
+              </p>
+              <div className="urlShortenerFormActions">
+                <button className="urlShortenerPrimary" type="submit" disabled={creating}>
+                  {creating ? "Creating…" : "Create short link"}
+                </button>
+                <button
+                  className="urlShortenerSecondary"
+                  type="button"
+                  onClick={clearForm}
+                  disabled={creating || (!destinationUrl && !customAlias)}
                 >
-                  <div className="urlShortenerRoute">
-                    <span className="urlShortenerRouteLabel">Destination</span>
-                    <span className="urlShortenerDestination" title={link.destinationUrl}>
-                      {link.destinationUrl}
-                    </span>
-                    <ArrowDown className="urlShortenerRelayArrow" size={18} aria-hidden />
-                    <span className="urlShortenerRouteLabel">Short route</span>
-                    <strong className="urlShortenerShortUrl">{link.shortUrl}</strong>
-                  </div>
-                  <button
-                    className={
-                      isCopied
-                        ? "urlShortenerCopy isCopied"
-                        : "urlShortenerCopy"
-                    }
-                    type="button"
-                    onClick={() => void handleCopy(link)}
-                  >
-                    {isCopied ? <Check size={17} /> : <Clipboard size={17} />}
-                    {isCopied ? "Copied" : "Copy short URL"}
-                  </button>
-
-                  <dl className="urlShortenerStats">
-                    <div>
-                      <dt>Clicks</dt>
-                      <dd>{link.clickCount}</dd>
-                    </div>
-                    <div>
-                      <dt>Expires</dt>
-                      <dd>
-                        <time dateTime={link.expiresAt}>{formatDate(link.expiresAt)}</time>
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Last click</dt>
-                      <dd>{formatLastClick(link.lastClickedAt)}</dd>
-                    </div>
-                  </dl>
-
-                  <button
-                    className="urlShortenerRefresh"
-                    type="button"
-                    disabled={isRefreshing || serviceState !== "ready"}
-                    onClick={() => void refreshStats(link)}
-                  >
-                    <RefreshCw size={16} aria-hidden />
-                    {isRefreshing ? "Refreshing…" : "Refresh statistics"}
-                  </button>
-                </article>
-              );
-            })}
+                  Clear form
+                </button>
+              </div>
+            </form>
+            <ul id="short-link-help" className="urlShortenerFacts">
+              <li>Links expire automatically.</li>
+              <li>Use 3–48 lowercase letters, numbers, or hyphens for an alias.</li>
+              <li>Click statistics stay with each link.</li>
+            </ul>
           </div>
-        </section>
-      )}
+        )}
+
+        {showSession && (
+          <section className="panel urlShortenerResults" aria-labelledby="created-links-heading">
+            <h2 id="created-links-heading">Created this session</h2>
+            {links.length === 0 ? (
+              <p className="urlShortenerEmpty">
+                Links you create in this session show up here.
+              </p>
+            ) : (
+              <div className="urlShortenerResultList">
+                {links.map((link) => {
+                  const isRefreshing = refreshingLinks.has(identityKey(link));
+                  const destinationCopied =
+                    copiedKey === copiedFieldKey(link.slug, "destination");
+                  const shortCopied = copiedKey === copiedFieldKey(link.slug, "short");
+                  return (
+                    <article
+                      key={identityKey(link)}
+                      className="urlShortenerRelay"
+                      aria-label={`Short link ${link.slug}`}
+                    >
+                      <div className="urlShortenerLinkMain">
+                        <div className="urlShortenerRoute">
+                          <button
+                            className={
+                              destinationCopied
+                                ? "urlShortenerCopy urlShortenerDestinationCopy isCopied"
+                                : "urlShortenerCopy urlShortenerDestinationCopy"
+                            }
+                            type="button"
+                            aria-label={
+                              destinationCopied
+                                ? `Copied ${link.destinationUrl}`
+                                : `Copy ${link.destinationUrl}`
+                            }
+                            onClick={() => void handleCopy(link, "destination")}
+                          >
+                            <span
+                              className="urlShortenerDestination"
+                              title={link.destinationUrl}
+                            >
+                              {link.destinationUrl}
+                            </span>
+                            {destinationCopied ? (
+                              <Check size={20} aria-hidden />
+                            ) : (
+                              <Clipboard size={20} aria-hidden />
+                            )}
+                          </button>
+                          <ArrowDown
+                            className="urlShortenerRelayArrow"
+                            size={28}
+                            aria-hidden
+                          />
+                          <button
+                            className={
+                              shortCopied
+                                ? "urlShortenerCopy isCopied"
+                                : "urlShortenerCopy"
+                            }
+                            type="button"
+                            aria-label={
+                              shortCopied
+                                ? `Copied ${link.shortUrl}`
+                                : `Copy ${link.shortUrl}`
+                            }
+                            onClick={() => void handleCopy(link, "short")}
+                          >
+                            <span className="urlShortenerShortUrl">{link.shortUrl}</span>
+                            {shortCopied ? (
+                              <Check size={20} aria-hidden />
+                            ) : (
+                              <Clipboard size={20} aria-hidden />
+                            )}
+                          </button>
+                        </div>
+                        <div className="urlShortenerLinkActions">
+                          <button
+                            className="urlShortenerRefresh"
+                            type="button"
+                            disabled={isRefreshing || serviceState !== "ready"}
+                            onClick={() => void refreshStats(link)}
+                          >
+                            <RefreshCw size={16} aria-hidden />
+                            {isRefreshing ? "Refreshing…" : "Refresh statistics"}
+                          </button>
+                        </div>
+                      </div>
+
+                      <dl className="urlShortenerStats">
+                        <div>
+                          <dt>Clicks</dt>
+                          <dd>{link.clickCount}</dd>
+                        </div>
+                        <div>
+                          <dt>Expires</dt>
+                          <dd>
+                            <time dateTime={link.expiresAt}>{formatDate(link.expiresAt)}</time>
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Last click</dt>
+                          <dd>{formatLastClick(link.lastClickedAt)}</dd>
+                        </div>
+                      </dl>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+      </div>
     </div>
   );
 }

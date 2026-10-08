@@ -1,4 +1,10 @@
 .urlShortener {
+  container-type: inline-size;
+  display: grid;
+  gap: var(--spacing-lg);
+}
+
+.urlShortenerWorkspace {
   display: grid;
   gap: var(--spacing-lg);
 }
@@ -11,6 +17,11 @@
 
 .urlShortenerNotice p {
   margin: 0;
+}
+
+.urlShortenerComposer {
+  display: grid;
+  gap: var(--spacing-md);
 }
 
 .urlShortenerForm {
@@ -26,8 +37,33 @@
   margin-top: var(--spacing-xs);
 }
 
-.urlShortenerHelp {
-  margin-top: 2px;
+.urlShortenerFacts {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: var(--spacing-sm) 0 0;
+  border-top: 1px solid var(--border);
+}
+
+.urlShortenerFacts li {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  margin: 0;
+  padding-left: 16px;
+  position: relative;
+}
+
+.urlShortenerFacts li::before {
+  background: var(--primary);
+  border-radius: var(--radius-full);
+  content: "";
+  height: 6px;
+  left: 0;
+  position: absolute;
+  top: 0.45em;
+  width: 6px;
 }
 
 .urlShortenerFormActions {
@@ -102,10 +138,9 @@
 }
 
 .urlShortenerResults {
-  border-top: 1px solid var(--border);
   display: grid;
+  align-content: start;
   gap: var(--spacing-sm);
-  padding-top: var(--spacing-lg);
 }
 
 .urlShortenerResults h2 {
@@ -113,6 +148,19 @@
   letter-spacing: 0.08em;
   margin: 0;
   text-transform: uppercase;
+}
+
+.urlShortenerEmpty {
+  align-content: center;
+  background: var(--surface-strong);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  display: grid;
+  line-height: 1.5;
+  margin: 0;
+  min-height: 220px;
+  padding: var(--spacing-lg);
 }
 
 .urlShortenerResultList {
@@ -125,23 +173,27 @@
   border: 1px solid var(--border);
   border-left: 4px solid var(--primary);
   border-radius: var(--radius-sm);
+  container-type: inline-size;
   display: grid;
   gap: var(--spacing-md);
   padding: var(--spacing-md);
 }
 
+.urlShortenerLinkMain {
+  display: grid;
+  gap: var(--spacing-sm);
+}
+
 .urlShortenerRoute {
   display: grid;
-  gap: 5px;
+  flex: 1 1 180px;
+  gap: 4px;
   min-width: 0;
 }
 
-.urlShortenerRouteLabel {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.urlShortenerRelayArrow {
+  color: var(--primary);
+  margin: 2px 0 2px 2px;
 }
 
 .urlShortenerDestination,
@@ -159,52 +211,69 @@
   font-size: 0.78rem;
 }
 
-.urlShortenerRelayArrow {
-  color: var(--primary);
-  margin: 2px 0;
-}
-
 .urlShortenerShortUrl {
   color: var(--text);
-  font-size: clamp(0.92rem, 4vw, 1.08rem);
+  font-size: clamp(0.95rem, 2vw, 1.12rem);
+}
+
+.urlShortenerLinkActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
 }
 
 .urlShortenerCopy {
-  background: var(--primary);
-  border: 1px solid var(--primary);
-  color: #ffffff;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
   font-weight: 700;
-  padding: 0 var(--spacing-md);
-  width: 100%;
+  gap: 10px;
+  justify-content: flex-start;
+  justify-self: start;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0 12px;
+  width: fit-content;
 }
 
 .urlShortenerCopy:hover:not(:disabled) {
-  background: var(--primary-strong);
-  border-color: var(--primary-strong);
+  background: var(--surface);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
-.urlShortenerCopy.isCopied {
-  background: var(--success);
+.urlShortenerCopy.isCopied,
+.urlShortenerCopy.isCopied:hover:not(:disabled) {
+  background: var(--surface);
   border-color: var(--success);
+  color: var(--success);
 }
 
-.app.dark .urlShortenerCopy {
-  color: #102824;
+.urlShortenerCopy svg {
+  flex-shrink: 0;
+}
+
+.urlShortenerCopy .urlShortenerShortUrl,
+.urlShortenerDestinationCopy .urlShortenerDestination {
+  flex: 0 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+
+.urlShortenerDestinationCopy {
+  color: var(--muted);
+  font-weight: 600;
 }
 
 .urlShortenerStats {
   display: grid;
   gap: var(--spacing-xs);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: 0;
 }
 
 .urlShortenerStats div {
   min-width: 0;
-}
-
-.urlShortenerStats div:last-child {
-  grid-column: 1 / -1;
 }
 
 .urlShortenerStats dt {
@@ -214,25 +283,42 @@
 }
 
 .urlShortenerStats dd {
-  font-size: 0.85rem;
+  font-size: 1rem;
   font-variant-numeric: tabular-nums;
+  font-weight: 600;
   margin: 3px 0 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.urlShortenerRefresh {
-  justify-self: start;
+@container (min-width: 760px) {
+  .urlShortenerWorkspace:has(.urlShortenerComposer) {
+    align-items: start;
+    grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+  }
+
+  .urlShortenerComposer {
+    position: sticky;
+    top: var(--spacing-lg);
+  }
 }
 
-@media (max-width: 420px) {
+@container (max-width: 520px) {
   .urlShortenerFormActions {
     grid-template-columns: 1fr;
   }
 
   .urlShortenerSecondary {
     width: 100%;
+  }
+
+  .urlShortenerStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .urlShortenerStats div:last-child {
+    grid-column: 1 / -1;
   }
 }
 

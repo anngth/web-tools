@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { copyTextToClipboard } from "../../shared/clipboard";
@@ -190,10 +190,50 @@ describe("UrlShortenerPage", () => {
   it("copies the dominant short route and exposes active copy feedback", async () => {
     const user = await createALink();
 
-    await user.click(screen.getByRole("button", { name: "Copy short URL" }));
+    await user.click(
+      screen.getByRole("button", { name: `Copy ${createdLink.shortUrl}` }),
+    );
 
     expect(copyMock).toHaveBeenCalledWith(createdLink.shortUrl);
-    expect(screen.getByRole("button", { name: "Copied" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: `Copied ${createdLink.shortUrl}` }),
+    ).toBeVisible();
+  });
+
+  it("shows the destination above the short link", async () => {
+    await createALink();
+    const article = screen.getByRole("article", { name: "Short link docs-42" });
+    const text = article.textContent ?? "";
+
+    expect(text.indexOf(createdLink.destinationUrl)).toBeLessThan(
+      text.indexOf(createdLink.shortUrl),
+    );
+  });
+
+  it("restores the copy control after the confirmation", async () => {
+    await createALink();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const copyButton = screen.getByRole("button", {
+        name: `Copy ${createdLink.shortUrl}`,
+      });
+      await act(async () => {
+        copyButton.click();
+      });
+      expect(
+        screen.getByRole("button", { name: `Copied ${createdLink.shortUrl}` }),
+      ).toBeVisible();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2_000);
+      });
+
+      expect(
+        screen.getByRole("button", { name: `Copy ${createdLink.shortUrl}` }),
+      ).toBeVisible();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("clears form fields without removing created links", async () => {
@@ -496,7 +536,9 @@ describe("UrlShortenerPage", () => {
     await user.click(screen.getByRole("button", { name: "Create short link" }));
     await screen.findByText(createdLink.shortUrl);
     copyMock.mockResolvedValueOnce(false);
-    await user.click(screen.getByRole("button", { name: "Copy short URL" }));
+    await user.click(
+      screen.getByRole("button", { name: `Copy ${createdLink.shortUrl}` }),
+    );
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(
         "Could not copy the short URL. Check clipboard permission and try again.",
@@ -504,14 +546,71 @@ describe("UrlShortenerPage", () => {
     });
   });
 
+  it("shows a session placeholder until the first link is created", async () => {
+    const user = userEvent.setup();
+    createMock.mockResolvedValueOnce(createdLink);
+    render(<UrlShortenerPage />);
+
+    expect(
+      await screen.findByText("Links you create in this session show up here."),
+    ).toBeVisible();
+
+    await user.type(
+      screen.getByRole("textbox", { name: "Destination URL" }),
+      createdLink.destinationUrl,
+    );
+    await user.click(screen.getByRole("button", { name: "Create short link" }));
+
+    expect(await screen.findByText(createdLink.shortUrl)).toBeVisible();
+    expect(
+      screen.queryByText("Links you create in this session show up here."),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Created this session" })).toBeVisible();
+  });
+
+  it("lists expiry, alias, and click-stat rules with the form", async () => {
+    render(<UrlShortenerPage />);
+    await screen.findByRole("textbox", { name: "Destination URL" });
+
+    expect(screen.getByText("Links expire automatically.")).toBeVisible();
+    expect(
+      screen.getByText(
+        "Use 3–48 lowercase letters, numbers, or hyphens for an alias.",
+      ),
+    ).toBeVisible();
+    expect(screen.getByText("Click statistics stay with each link.")).toBeVisible();
+  });
+
+  it("copies the destination when that link is clicked", async () => {
+    const user = await createALink();
+
+    await user.click(
+      screen.getByRole("button", { name: `Copy ${createdLink.destinationUrl}` }),
+    );
+
+    expect(copyMock).toHaveBeenCalledWith(createdLink.destinationUrl);
+    expect(
+      screen.getByRole("button", { name: `Copied ${createdLink.destinationUrl}` }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: `Copy ${createdLink.shortUrl}` }),
+    ).toBeVisible();
+  });
+
   it("limits result controls to copy and refresh", async () => {
     await createALink();
     const result = screen.getByRole("article", { name: "Short link docs-42" });
 
-    expect(within(result).getAllByRole("button").map((button) => button.textContent)).toEqual([
-      "Copy short URL",
-      "Refresh statistics",
-    ]);
+    expect(
+      within(result).getByRole("button", { name: `Copy ${createdLink.destinationUrl}` }),
+    ).toBeVisible();
+    expect(
+      within(result).getByRole("button", { name: `Copy ${createdLink.shortUrl}` }),
+    ).toBeVisible();
+    expect(
+      within(result).getByRole("button", { name: "Refresh statistics" }),
+    ).toBeVisible();
+    expect(within(result).getAllByRole("button")).toHaveLength(3);
     expect(screen.queryByRole("button", { name: /delete|edit/i })).not.toBeInTheDocument();
   });
 });

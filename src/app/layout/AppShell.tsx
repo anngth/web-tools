@@ -59,7 +59,12 @@ export function AppShell({
         onToggleDarkMode={onToggleDarkMode}
       />
 
-      <section className="shell" aria-labelledby="page-title">
+      <section
+        className={
+          activeTool.id === "url-shortener" ? "shell shellWide" : "shell"
+        }
+        aria-labelledby="page-title"
+      >
         <PageHeader
           activeTool={activeTool}
           isSidebarOpen={sidebarOpen}

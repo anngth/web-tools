@@ -101,6 +101,17 @@ describe("App tool registry integration", () => {
     expect(window.location.pathname).toBe("/totp");
   });
 
+  it("widens only the URL shortener column", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    expect(document.querySelector(".shell")).not.toHaveClass("shellWide");
+
+    await user.click(screen.getByRole("button", { name: "URL Shortener" }));
+
+    expect(document.querySelector(".shell")).toHaveClass("shellWide");
+  });
+
   it("returns to TOTP when the address goes back", async () => {
     const user = userEvent.setup();
     render(<App />);
