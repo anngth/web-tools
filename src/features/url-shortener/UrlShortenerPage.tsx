@@ -78,6 +78,7 @@ function CopyableUrl({
         onClick={onCopy}
       >
         {copied ? <Check size={20} aria-hidden /> : <Clipboard size={20} aria-hidden />}
+        {copied ? "Copied" : "Copy"}
       </button>
     </div>
   );

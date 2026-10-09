@@ -255,10 +255,6 @@
   text-decoration: underline;
 }
 
-.urlShortenerCopy:has(a:hover) {
-  border-color: var(--primary);
-}
-
 .urlShortenerDestinationCopy .urlShortenerDestination {
   color: var(--muted);
 }
@@ -268,9 +264,11 @@
   border: 0;
   color: inherit;
   flex-shrink: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
   height: var(--button-height);
-  padding: 0;
-  width: var(--button-height);
+  padding: 0 10px;
+  width: auto;
 }
 
 .urlShortenerCopyButton:hover:not(:disabled) {
@@ -278,8 +276,7 @@
 }
 
 .urlShortenerCopy.isCopied,
-.urlShortenerCopy.isCopied:hover,
-.urlShortenerCopy.isCopied:has(a:hover) {
+.urlShortenerCopy.isCopied:hover {
   background: var(--surface);
   border-color: var(--success);
   color: var(--success);

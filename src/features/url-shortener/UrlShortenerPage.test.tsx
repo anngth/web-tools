@@ -212,11 +212,19 @@ describe("UrlShortenerPage", () => {
     );
     expect(copyMock).not.toHaveBeenCalled();
 
-    await user.click(
-      screen.getByRole("button", { name: `Copy ${createdLink.shortUrl}` }),
-    );
+    const shortCopy = screen.getByRole("button", {
+      name: `Copy ${createdLink.shortUrl}`,
+    });
+    const destinationCopy = screen.getByRole("button", {
+      name: `Copy ${createdLink.destinationUrl}`,
+    });
+    expect(shortCopy).toHaveTextContent("Copy");
+    expect(destinationCopy).toHaveTextContent("Copy");
+
+    await user.click(shortCopy);
     expect(copyMock).toHaveBeenCalledTimes(1);
     expect(copyMock).toHaveBeenCalledWith(createdLink.shortUrl);
+    expect(shortCopy).toHaveTextContent("Copied");
   });
 
   it("copies the dominant short route and exposes active copy feedback", async () => {
