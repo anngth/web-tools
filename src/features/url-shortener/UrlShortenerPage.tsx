@@ -47,6 +47,42 @@ function hasIdentity(link: CreatedShortLink, identity: LinkIdentity): boolean {
   return link.slug === identity.slug && link.createdAt === identity.createdAt;
 }
 
+function CopyableUrl({
+  url,
+  copied,
+  onCopy,
+  rowClassName,
+  textClassName,
+}: {
+  url: string;
+  copied: boolean;
+  onCopy: () => void;
+  rowClassName: string;
+  textClassName: string;
+}) {
+  return (
+    <div className={copied ? `${rowClassName} isCopied` : rowClassName}>
+      <a
+        className={textClassName}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={url}
+      >
+        {url}
+      </a>
+      <button
+        className="urlShortenerCopyButton"
+        type="button"
+        aria-label={copied ? `Copied ${url}` : `Copy ${url}`}
+        onClick={onCopy}
+      >
+        {copied ? <Check size={20} aria-hidden /> : <Clipboard size={20} aria-hidden />}
+      </button>
+    </div>
+  );
+}
+
 export function UrlShortenerPage() {
   const [destinationUrl, setDestinationUrl] = useState("");
   const [customAlias, setCustomAlias] = useState("");
@@ -341,58 +377,25 @@ export function UrlShortenerPage() {
                     >
                       <div className="urlShortenerLinkMain">
                         <div className="urlShortenerRoute">
-                          <button
-                            className={
-                              destinationCopied
-                                ? "urlShortenerCopy urlShortenerDestinationCopy isCopied"
-                                : "urlShortenerCopy urlShortenerDestinationCopy"
-                            }
-                            type="button"
-                            aria-label={
-                              destinationCopied
-                                ? `Copied ${link.destinationUrl}`
-                                : `Copy ${link.destinationUrl}`
-                            }
-                            onClick={() => void handleCopy(link, "destination")}
-                          >
-                            <span
-                              className="urlShortenerDestination"
-                              title={link.destinationUrl}
-                            >
-                              {link.destinationUrl}
-                            </span>
-                            {destinationCopied ? (
-                              <Check size={20} aria-hidden />
-                            ) : (
-                              <Clipboard size={20} aria-hidden />
-                            )}
-                          </button>
+                          <CopyableUrl
+                            url={link.destinationUrl}
+                            copied={destinationCopied}
+                            onCopy={() => void handleCopy(link, "destination")}
+                            rowClassName="urlShortenerCopy urlShortenerDestinationCopy"
+                            textClassName="urlShortenerDestination"
+                          />
                           <ArrowDown
                             className="urlShortenerRelayArrow"
                             size={28}
                             aria-hidden
                           />
-                          <button
-                            className={
-                              shortCopied
-                                ? "urlShortenerCopy isCopied"
-                                : "urlShortenerCopy"
-                            }
-                            type="button"
-                            aria-label={
-                              shortCopied
-                                ? `Copied ${link.shortUrl}`
-                                : `Copy ${link.shortUrl}`
-                            }
-                            onClick={() => void handleCopy(link, "short")}
-                          >
-                            <span className="urlShortenerShortUrl">{link.shortUrl}</span>
-                            {shortCopied ? (
-                              <Check size={20} aria-hidden />
-                            ) : (
-                              <Clipboard size={20} aria-hidden />
-                            )}
-                          </button>
+                          <CopyableUrl
+                            url={link.shortUrl}
+                            copied={shortCopied}
+                            onCopy={() => void handleCopy(link, "short")}
+                            rowClassName="urlShortenerCopy"
+                            textClassName="urlShortenerShortUrl"
+                          />
                         </div>
                         <div className="urlShortenerLinkActions">
                           <button

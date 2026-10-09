@@ -74,7 +74,7 @@
 
 .urlShortenerPrimary,
 .urlShortenerSecondary,
-.urlShortenerCopy,
+.urlShortenerCopyButton,
 .urlShortenerRefresh {
   align-items: center;
   border-radius: var(--radius-sm);
@@ -120,14 +120,14 @@
 
 .urlShortenerPrimary:active:not(:disabled),
 .urlShortenerSecondary:active:not(:disabled),
-.urlShortenerCopy:active:not(:disabled),
+.urlShortenerCopyButton:active:not(:disabled),
 .urlShortenerRefresh:active:not(:disabled) {
   transform: translateY(1px);
 }
 
 .urlShortenerPrimary:disabled,
 .urlShortenerSecondary:disabled,
-.urlShortenerCopy:disabled,
+.urlShortenerCopyButton:disabled,
 .urlShortenerRefresh:disabled {
   cursor: not-allowed;
   opacity: 0.55;
@@ -223,29 +223,72 @@
 }
 
 .urlShortenerCopy {
+  align-items: center;
   background: var(--surface);
   border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   color: var(--text);
+  display: inline-flex;
   font-weight: 700;
-  gap: 10px;
+  gap: 4px;
   justify-content: flex-start;
   justify-self: start;
   max-width: 100%;
   min-width: 0;
-  padding: 0 12px;
+  padding: 0 4px 0 12px;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease;
   width: fit-content;
 }
 
-.urlShortenerCopy:hover:not(:disabled) {
-  background: var(--surface);
+.urlShortenerCopy a {
+  color: inherit;
+  display: block;
+  line-height: var(--button-height);
+  min-width: 0;
+  text-decoration: none;
+}
+
+.urlShortenerCopy a:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.urlShortenerCopy:has(a:hover) {
   border-color: var(--primary);
+}
+
+.urlShortenerDestinationCopy .urlShortenerDestination {
+  color: var(--muted);
+}
+
+.urlShortenerCopyButton {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  flex-shrink: 0;
+  height: var(--button-height);
+  padding: 0;
+  width: var(--button-height);
+}
+
+.urlShortenerCopyButton:hover:not(:disabled) {
   color: var(--primary);
 }
 
 .urlShortenerCopy.isCopied,
-.urlShortenerCopy.isCopied:hover:not(:disabled) {
+.urlShortenerCopy.isCopied:hover,
+.urlShortenerCopy.isCopied:has(a:hover) {
   background: var(--surface);
   border-color: var(--success);
+  color: var(--success);
+}
+
+.urlShortenerCopy.isCopied a,
+.urlShortenerCopy.isCopied a:hover,
+.urlShortenerCopy.isCopied .urlShortenerCopyButton,
+.urlShortenerCopy.isCopied .urlShortenerCopyButton:hover:not(:disabled) {
   color: var(--success);
 }
 
@@ -326,6 +369,7 @@
   .urlShortenerPrimary,
   .urlShortenerSecondary,
   .urlShortenerCopy,
+  .urlShortenerCopyButton,
   .urlShortenerRefresh {
     transition: none;
   }

@@ -187,6 +187,38 @@ describe("UrlShortenerPage", () => {
     ]);
   });
 
+  it("opens the short URL and destination from the link text", async () => {
+    await createALink();
+
+    const shortLink = screen.getByRole("link", { name: createdLink.shortUrl });
+    expect(shortLink).toHaveAttribute("href", createdLink.shortUrl);
+    expect(shortLink).toHaveAttribute("target", "_blank");
+    expect(shortLink).toHaveAttribute("rel", "noopener noreferrer");
+
+    const destinationLink = screen.getByRole("link", {
+      name: createdLink.destinationUrl,
+    });
+    expect(destinationLink).toHaveAttribute("href", createdLink.destinationUrl);
+    expect(destinationLink).toHaveAttribute("target", "_blank");
+    expect(destinationLink).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("copies only from the button beside each link", async () => {
+    const user = await createALink();
+
+    await user.click(screen.getByRole("link", { name: createdLink.shortUrl }));
+    await user.click(
+      screen.getByRole("link", { name: createdLink.destinationUrl }),
+    );
+    expect(copyMock).not.toHaveBeenCalled();
+
+    await user.click(
+      screen.getByRole("button", { name: `Copy ${createdLink.shortUrl}` }),
+    );
+    expect(copyMock).toHaveBeenCalledTimes(1);
+    expect(copyMock).toHaveBeenCalledWith(createdLink.shortUrl);
+  });
+
   it("copies the dominant short route and exposes active copy feedback", async () => {
     const user = await createALink();
 
@@ -610,7 +642,14 @@ describe("UrlShortenerPage", () => {
     expect(
       within(result).getByRole("button", { name: "Refresh statistics" }),
     ).toBeVisible();
+    expect(
+      within(result).getByRole("link", { name: createdLink.destinationUrl }),
+    ).toHaveAttribute("href", createdLink.destinationUrl);
+    expect(
+      within(result).getByRole("link", { name: createdLink.shortUrl }),
+    ).toHaveAttribute("href", createdLink.shortUrl);
     expect(within(result).getAllByRole("button")).toHaveLength(3);
+    expect(within(result).getAllByRole("link")).toHaveLength(2);
     expect(screen.queryByRole("button", { name: /delete|edit/i })).not.toBeInTheDocument();
   });
 });

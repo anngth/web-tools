@@ -5,5 +5,5 @@ compatibility_date = "2026-07-12"
 [[d1_databases]]
 binding = "DB"
 database_name = "web-tools-url-shortener"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "e497bb3c-5742-44e1-a7fd-3fa35706354e"
 migrations_dir = "src/worker/short-links/migrations"
