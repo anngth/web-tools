@@ -1,4 +1,10 @@
-import type { RateLimitRule } from "./rate-limiter";
+// Kept free of Node imports: the Cloudflare Worker reads the same variables.
+export interface RateLimitRule {
+  /** Maximum accepted requests per window. */
+  limit: number;
+  /** Window length in milliseconds. */
+  windowMs: number;
+}
 
 export interface RateLimitEnvironment {
   RATE_LIMIT_PER_MINUTE?: string;

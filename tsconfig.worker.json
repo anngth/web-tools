@@ -5,6 +5,8 @@
     "types": ["@cloudflare/workers-types"]
   },
   "include": [
+    "src/worker/main.ts",
+    "src/worker/http/*.ts",
     "src/worker/short-links/worker.ts",
     "src/worker/short-links/d1-store.ts",
     "src/worker/short-links/cloudflare-types.d.ts",
@@ -13,7 +15,12 @@
     "src/shared/short-links/local-backend.ts",
     "src/shared/short-links/slug.ts",
     "src/shared/short-links/short-link-backend.ts",
-    "src/shared/http/read-limited-body.ts"
+    "src/shared/http/read-limited-body.ts",
+    "src/server/http/public-routes.ts",
+    "src/server/http/index-html.ts",
+    "src/server/http/limits-config.ts",
+    "src/server/http/logger.ts",
+    "src/app/toolSeoData.ts"
   ],
   "exclude": ["src/worker/**/*.test.ts"]
 }

@@ -1,15 +1,11 @@
 import { isIP } from "node:net";
+import type { RateLimitRule } from "./limits-config";
 
 export interface RateLimiter {
   consume(key: string): { allowed: boolean; retryAfterSeconds: number };
 }
 
-export interface RateLimitRule {
-  /** Maximum accepted requests per window. */
-  limit: number;
-  /** Window length in milliseconds. */
-  windowMs: number;
-}
+export type { RateLimitRule } from "./limits-config";
 
 interface WindowEntry {
   count: number;

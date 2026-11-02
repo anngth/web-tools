@@ -12,4 +12,5 @@ declare module "cloudflare:test" {
 beforeEach(async () => {
   await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
   await env.DB.prepare("DELETE FROM short_links").run();
+  await env.DB.prepare("DELETE FROM rate_limit_windows").run();
 });

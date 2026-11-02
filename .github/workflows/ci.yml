@@ -52,5 +52,11 @@ jobs:
         env:
           POSTGRES_TEST_URL: postgres://postgres:postgres@localhost:5432/web_tools_test
 
+      - name: Run Worker tests
+        run: npm run cf:test
+
+      - name: Typecheck Worker
+        run: npm run cf:typecheck
+
       - name: Build
         run: npm run fe:build

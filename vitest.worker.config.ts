@@ -22,10 +22,7 @@ export default defineConfig({
     })),
   ],
   test: {
-    include: [
-      "src/worker/short-links/d1-store.test.ts",
-      "src/worker/short-links/worker.test.ts",
-    ],
+    include: ["src/worker/**/*.test.ts"],
     setupFiles: [
       "src/worker/short-links/worker-test.setup.ts",
     ],

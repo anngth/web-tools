@@ -1,6 +1,31 @@
 name = "web-tools-url-shortener"
-main = "src/worker/short-links/worker.ts"
+main = "src/worker/main.ts"
 compatibility_date = "2026-07-12"
+
+# dist/ comes from the Vite build; npm run cf:deploy builds it first.
+# The Worker runs first on every path so HTML, robots.txt and sitemap.xml get
+# the site origin, per-route SEO and security headers, as the Node server did.
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = true
+
+# Replaces the Node cleanup interval (CLEANUP_INTERVAL_SECONDS=300).
+[triggers]
+crons = ["*/5 * * * *"]
+
+# Without PUBLIC_BASE_URL, links and canonical URLs use the request origin.
+[vars]
+PUBLIC_BASE_URL = "https://tools.heimerng.dev"
+URL_SHORTENER_TTL_SECONDS = "2592000"
+MAX_ACTIVE_LINKS = "100000"
+RATE_LIMIT_PER_MINUTE = "10"
+RATE_LIMIT_PER_HOUR = "60"
+RATE_LIMIT_PER_DAY = "200"
+
+[observability]
+enabled = true
 
 [[d1_databases]]
 binding = "DB"
