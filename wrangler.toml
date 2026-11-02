@@ -1,4 +1,4 @@
-name = "web-tools-url-shortener"
+name = "web-tools"
 main = "src/worker/main.ts"
 compatibility_date = "2026-07-12"
 
