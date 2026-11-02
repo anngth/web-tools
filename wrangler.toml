@@ -1,6 +1,7 @@
 name = "web-tools"
 main = "src/worker/main.ts"
 compatibility_date = "2026-07-12"
+routes = [{ pattern = "tools.heimerng.dev/*", zone_name = "heimerng.dev" }]
 
 # dist/ comes from the Vite build; npm run cf:deploy builds it first.
 # The Worker runs first on every path so HTML, robots.txt and sitemap.xml get
