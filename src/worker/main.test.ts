@@ -1,5 +1,5 @@
 import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:test";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import worker, { type WorkerEnv } from "./main";
 
 const workerEnv = {
@@ -17,6 +17,8 @@ async function insertLink(slug: string, expiresAt: string) {
 }
 
 describe("Worker entry", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it("keeps the token-protected gateway under /internal", async () => {
     const ctx = createExecutionContext();
     const response = await worker.fetch(
@@ -62,5 +64,28 @@ describe("Worker entry", () => {
     const windows = await env.DB.prepare("SELECT COUNT(*) AS count FROM rate_limit_windows")
       .first<{ count: number }>();
     expect(windows?.count).toBe(0);
+  });
+
+  it("logs a failed cleanup instead of throwing", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const brokenEnv = {
+      ...workerEnv,
+      DB: { prepare: () => { throw new Error("D1 down"); } },
+    } as unknown as WorkerEnv;
+
+    const ctx = createExecutionContext();
+    worker.scheduled(
+      { scheduledTime: Date.now(), cron: "*/5 * * * *", noRetry() {} },
+      brokenEnv,
+      ctx,
+    );
+    await waitOnExecutionContext(ctx);
+
+    expect(errors).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(errors.mock.calls[0][0]))).toMatchObject({
+      level: "error",
+      event: "cleanup_failed",
+      trigger: "scheduled",
+    });
   });
 });

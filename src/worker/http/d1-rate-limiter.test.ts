@@ -71,4 +71,20 @@ describe("D1 rate limiter", () => {
     ).all<{ window_ms: number }>();
     expect(remaining.results).toEqual([{ window_ms: 3_600_000 }]);
   });
+
+  it("rejects empty or duplicate rules", () => {
+    expect(() => createD1RateLimiter({ database: env.DB, rules: [] })).toThrow(RangeError);
+    expect(() =>
+      createD1RateLimiter({
+        database: env.DB,
+        rules: [
+          { limit: 1, windowMs: 60_000 },
+          { limit: 2, windowMs: 60_000 },
+        ],
+      }),
+    ).toThrow(RangeError);
+    expect(() =>
+      createD1RateLimiter({ database: env.DB, rules: [{ limit: 0, windowMs: 1 }] }),
+    ).toThrow(RangeError);
+  });
 });

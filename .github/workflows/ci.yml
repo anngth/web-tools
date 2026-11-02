@@ -55,8 +55,14 @@ jobs:
       - name: Run Worker tests
         run: npm run cf:test
 
-      - name: Typecheck Worker
-        run: npm run cf:typecheck
+      - name: Typecheck
+        run: npm run typecheck
 
       - name: Build
         run: npm run fe:build
+
+      # Bundles the Worker with dist/ and validates wrangler.toml without deploying.
+      - name: Check Worker bundle
+        run: npx wrangler deploy --dry-run --outdir dist-worker
+        env:
+          WRANGLER_SEND_METRICS: "false"

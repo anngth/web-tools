@@ -13,6 +13,7 @@ const INDEX_HTML = `<!doctype html><html><head>
 const assetFiles: Record<string, { body: string; type: string }> = {
   "/index.html": { body: INDEX_HTML, type: "text/html; charset=utf-8" },
   "/robots.txt": { body: "Sitemap: __SITE_ORIGIN__/sitemap.xml", type: "text/plain" },
+  "/sitemap.xml": { body: "<loc>__SITE_ORIGIN__/totp</loc>", type: "application/xml" },
   "/assets/app-AbCd1234.js": { body: "console.log(1)", type: "text/javascript" },
 };
 
@@ -119,5 +120,63 @@ describe("Worker public app", () => {
     const missing = await app().request("/assets/missing.js");
     expect(missing.headers.get("content-type")).toBe("text/html; charset=utf-8");
     expect((await app().request("/api/unknown")).status).toBe(404);
+  });
+
+  it("maps domain errors to public status codes", async () => {
+    const subject = app();
+    expect((await createLink(subject, "taken")).status).toBe(201);
+
+    const collision = await createLink(subject, "taken", "198.51.100.1");
+    expect(collision.status).toBe(409);
+    expect(await collision.json()).toEqual({ error: "alias_collision" });
+
+    const full = await createLink(app({ MAX_ACTIVE_LINKS: "1" }), "more", "198.51.100.2");
+    expect(full.status).toBe(503);
+    expect(await full.json()).toEqual({ error: "capacity_reached" });
+
+    expect((await subject.request("/s/missing")).status).toBe(404);
+    expect((await subject.request("/api/links/missing/stats")).status).toBe(404);
+  });
+
+  it("rejects malformed create requests", async () => {
+    // Each attempt counts toward the limit, so every request uses its own client.
+    let client = 0;
+    const post = (body: string, contentType = "application/json") =>
+      app().request("/api/links", {
+        method: "POST",
+        headers: { "content-type": contentType, "cf-connecting-ip": `192.0.2.${++client}` },
+        body,
+      });
+
+    expect((await post("{")).status).toBe(400);
+    expect((await post('{"destinationUrl":"https://example.com"}', "text/plain")).status).toBe(400);
+    expect((await post('{"destinationUrl":"https://example.com","extra":1}')).status).toBe(400);
+    expect((await post('{"destinationUrl":"javascript:alert(1)"}')).status).toBe(400);
+    expect((await post(JSON.stringify({ destinationUrl: "x".repeat(17_000) }))).status).toBe(413);
+  });
+
+  it("stops redirecting once a link expires", async () => {
+    expect((await createLink(app({ URL_SHORTENER_TTL_SECONDS: "60" }), "brief")).status).toBe(201);
+
+    const later = createWorkerPublicApp(
+      { DB: env.DB, ASSETS: assets },
+      { logger: logger(), now: () => new Date(NOW.getTime() + 60_000) },
+    );
+    expect((await later.request("/s/brief")).status).toBe(404);
+  });
+
+  it("rewrites the sitemap and tags every response with a request id", async () => {
+    const response = await app().request("/sitemap.xml");
+    expect(response.headers.get("content-type")).toBe("application/xml; charset=utf-8");
+    expect(await response.text()).toBe("<loc>https://tools.example.com/totp</loc>");
+    expect(response.headers.get("x-request-id")).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it("refuses invalid configuration", () => {
+    expect(() => app({ URL_SHORTENER_TTL_SECONDS: "0" })).toThrow();
+    expect(() => app({ PUBLIC_BASE_URL: "https://tools.example.com/path" })).toThrow();
+    expect(() =>
+      app({ RATE_LIMIT_PER_MINUTE: "0", RATE_LIMIT_PER_HOUR: "0", RATE_LIMIT_PER_DAY: "0" }),
+    ).toThrow();
   });
 });
