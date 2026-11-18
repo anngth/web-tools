@@ -1,6 +1,8 @@
 name = "web-tools"
 main = "src/worker/main.ts"
 compatibility_date = "2026-07-12"
+# Keep variables set in the dashboard (such as DISABLED_TOOLS) on deploy.
+keep_vars = true
 routes = [{ pattern = "tools.heimerng.dev/*", zone_name = "heimerng.dev" }]
 
 # dist/ comes from the Vite build; npm run cf:deploy builds it first.

@@ -1,6 +1,11 @@
 import type { Context, Hono } from "hono";
 import type { StatusCode } from "hono/utils/http-status";
-import { renderIndexHtml, renderSiteOrigin } from "../../server/http/index-html";
+import { parseDisabledTools } from "../../app/disabledTools";
+import {
+  renderIndexHtml,
+  renderSiteOrigin,
+  renderSitemap,
+} from "../../server/http/index-html";
 import {
   parseMaxActiveLinks,
   parseRateLimitRules,
@@ -26,6 +31,8 @@ export interface PublicWorkerEnv
   ASSETS: Fetcher;
   PUBLIC_BASE_URL?: string;
   URL_SHORTENER_TTL_SECONDS?: string;
+  /** Comma-separated tool ids to switch off, set in the dashboard. */
+  DISABLED_TOOLS?: string;
 }
 
 function cloudflareClientKey(context: Context): string {
@@ -68,7 +75,13 @@ export function createWorkerPublicApp(
     now: now === undefined ? undefined : () => now().getTime(),
   });
   const configuredOrigin = validatePublicOrigin(env.PUBLIC_BASE_URL);
+  const { ids: disabledTools, unknown, allDisabled } = parseDisabledTools(
+    env.DISABLED_TOOLS,
+  );
+  if (allDisabled) options.logger.error("config_ignored", { reason: "all_tools_disabled" });
+  if (unknown.length > 0) options.logger.error("config_ignored", { reason: "unknown_tool_id" });
   const app = createPublicRoutes({
+    disabledTools,
     backend,
     publicBaseUrl: env.PUBLIC_BASE_URL,
     getClientKey: cloudflareClientKey,
@@ -83,10 +96,12 @@ export function createWorkerPublicApp(
     env.ASSETS.fetch(new URL(path, context.req.url));
 
   const serveTemplate =
-    (file: string, contentType: string) => async (context: Context) => {
+    (file: string, contentType: string, transform = (text: string) => text) =>
+    async (context: Context) => {
       const asset = await fetchAsset(context, file);
       if (!asset.ok) return publicError(context, 404, "not_found");
-      return context.body(renderSiteOrigin(await asset.text(), originOf(context)), 200, {
+      const text = transform(await asset.text());
+      return context.body(renderSiteOrigin(text, originOf(context)), 200, {
         "Content-Type": contentType,
         "Cache-Control": "no-cache",
       });
@@ -95,7 +110,9 @@ export function createWorkerPublicApp(
   app.get("/robots.txt", serveTemplate("/robots.txt", "text/plain; charset=utf-8"));
   app.get(
     "/sitemap.xml",
-    serveTemplate("/sitemap.xml", "application/xml; charset=utf-8"),
+    serveTemplate("/sitemap.xml", "application/xml; charset=utf-8", (text) =>
+      renderSitemap(text, disabledTools),
+    ),
   );
 
   // The assets binding answers unknown paths with index.html
@@ -108,6 +125,7 @@ export function createWorkerPublicApp(
         await asset.text(),
         originOf(context),
         context.req.path,
+        disabledTools,
       );
       return context.body(html, 200, {
         "Content-Type": "text/html; charset=utf-8",

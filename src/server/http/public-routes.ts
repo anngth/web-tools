@@ -3,6 +3,7 @@ import {
   isShortLinkError,
   type CreateShortLinkInput,
 } from "../../shared/short-links/model.ts";
+import type { SeoToolId } from "../../app/toolSeoData";
 import type { AppLogger } from "./logger";
 import {
   RequestBodyTooLargeError,
@@ -51,6 +52,8 @@ export function createPublicRoutes(options: {
   limiter: PublicRateLimiter;
   logger: AppLogger;
   now?: () => Date;
+  /** Tools switched off at runtime; their API answers 404. */
+  disabledTools?: ReadonlySet<SeoToolId>;
 }): Hono<AppBindings> {
   const configuredOrigin = validatePublicOrigin(options.publicBaseUrl);
   const now = options.now ?? (() => new Date());
@@ -65,6 +68,13 @@ export function createPublicRoutes(options: {
     context.header("Content-Security-Policy", CONTENT_SECURITY_POLICY);
     await next();
   });
+
+  if (options.disabledTools?.has("url-shortener")) {
+    // `/s/:slug` stays up so links that were already shared keep working.
+    const notFound = (context: Context) => publicError(context, 404, "not_found");
+    app.all("/api/links", notFound);
+    app.all("/api/links/*", notFound);
+  }
 
   app.onError((error, context) => {
     options.logger.error("request_failed", {

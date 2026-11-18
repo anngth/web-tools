@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderIndexHtml } from "./index-html";
+import { renderIndexHtml, renderSitemap } from "./index-html";
 
 const source = `<html><head>
     <title>TOTP Generator | Web Tools</title>
@@ -53,3 +53,53 @@ describe("renderIndexHtml", () => {
     );
   });
 });
+
+describe("renderIndexHtml with disabled tools", () => {
+  it("resolves a disabled tool path to the fallback tool and lists what is off", () => {
+    const html = renderIndexHtml(source, origin, "/url-shortener", new Set(["url-shortener"]));
+
+    expect(html).toContain("<title>TOTP Generator - Free 2FA Codes | Web Tools</title>");
+    expect(html).toContain('<link rel="canonical" href="https://example.org/totp" />');
+    expect(html).toContain('<meta name="disabled-tools" content="url-shortener" />');
+  });
+
+  it("serves URL Shortener metadata for every path when TOTP is off", () => {
+    for (const path of ["/", "/totp", "/url-shortener"]) {
+      const html = renderIndexHtml(source, origin, path, new Set(["totp"]));
+      expect(html).toContain("<title>URL Shortener | Web Tools</title>");
+      expect(html).toContain('"@type": "SoftwareApplication"');
+      expect(html).toContain('<meta name="disabled-tools" content="totp" />');
+    }
+  });
+
+  it("adds no meta tag when nothing is disabled", () => {
+    expect(renderIndexHtml(source, origin, "/totp")).not.toContain("disabled-tools");
+  });
+});
+
+describe("renderSitemap", () => {
+  const sitemap = `<urlset>
+  <url>
+    <loc>__SITE_ORIGIN__/totp</loc>
+  </url>
+  <url>
+    <loc>__SITE_ORIGIN__/url-shortener</loc>
+  </url>
+</urlset>`;
+
+  it("removes entries of disabled tools only", () => {
+    const result = renderSitemap(sitemap, new Set(["url-shortener"]));
+    expect(result).toContain("/totp</loc>");
+    expect(result).not.toContain("url-shortener");
+    expect(result).toBe(`<urlset>
+  <url>
+    <loc>__SITE_ORIGIN__/totp</loc>
+  </url>
+</urlset>`);
+  });
+
+  it("returns the file unchanged when nothing is disabled", () => {
+    expect(renderSitemap(sitemap, new Set())).toBe(sitemap);
+  });
+});
+

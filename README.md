@@ -64,6 +64,17 @@ Settings are `[vars]` in `wrangler.toml` and ship with each deploy:
 
 A cron trigger every 5 minutes deletes expired links and old rate-limit windows.
 
+### Turning tools on and off
+
+`DISABLED_TOOLS` is a runtime variable: a comma-separated list of tool ids (`totp`, `url-shortener`). Set it in the dashboard (Workers & Pages → web-tools → Settings → Variables and Secrets → Add). It takes effect as soon as it is saved, with no build or push. Delete the variable, or leave it empty, to turn everything back on. `keep_vars = true` in `wrangler.toml` keeps it across deploys. Do not also list it in `[vars]`, or the file wins.
+
+For a disabled tool:
+
+- Its sidebar entry is hidden, and its path opens the first enabled tool.
+- Its API (`/api/links*`) answers 404. For the URL Shortener, `/s/:slug` keeps redirecting so links that were already shared still work, and the cleanup cron keeps running.
+- It is left out of `sitemap.xml`, and page metadata follows the tool that is shown instead.
+- Unknown ids are ignored, and a list that would disable every tool is ignored. Both are logged as `config_ignored` (see `wrangler tail`).
+
 ### Logs and rollback
 
 ```bash

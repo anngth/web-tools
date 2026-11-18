@@ -22,6 +22,8 @@ Production runs on the Cloudflare Worker (below). Node: `npm run be:dev`, with `
 
 ## Where behavior lives
 
+Tools can be switched off at runtime with the `DISABLED_TOOLS` variable (see README); parsing is `src/app/disabledTools.ts`, the API gate is in `src/server/http/public-routes.ts`, and the sitemap and `index.html` rewriting are in `src/server/http/index-html.ts`.
+
 Worker: entry, routing and cron cleanup are `src/worker/main.ts`; static files and SEO are `src/worker/http/public-app.ts`; rate limits are `src/worker/http/d1-rate-limiter.ts`.
 
 Node (Docker): Startup and backend choice are `src/server/main.ts` and `src/server/short-links/backend-selector.ts`. Failure reasons are `src/server/startup-failure.ts`. Logs are `src/server/http/logger.ts`. Cleanup and shutdown are `src/server/http/cleanup-scheduler.ts` and `src/server/main.ts`. Rate limits and proxy trust are `src/server/http/limits-config.ts` and `src/server/http/rate-limiter.ts`. The HTTP API is `src/server/http/public-app.ts`.

@@ -13,7 +13,10 @@ const INDEX_HTML = `<!doctype html><html><head>
 const assetFiles: Record<string, { body: string; type: string }> = {
   "/index.html": { body: INDEX_HTML, type: "text/html; charset=utf-8" },
   "/robots.txt": { body: "Sitemap: __SITE_ORIGIN__/sitemap.xml", type: "text/plain" },
-  "/sitemap.xml": { body: "<loc>__SITE_ORIGIN__/totp</loc>", type: "application/xml" },
+  "/sitemap.xml": {
+    body: "<urlset><url><loc>__SITE_ORIGIN__/totp</loc></url><url><loc>__SITE_ORIGIN__/url-shortener</loc></url></urlset>",
+    type: "application/xml",
+  },
   "/assets/app-AbCd1234.js": { body: "console.log(1)", type: "text/javascript" },
 };
 
@@ -26,8 +29,10 @@ const assets = {
   },
 } as unknown as Fetcher;
 
+const errorLog = vi.fn();
+
 function logger(): AppLogger {
-  return { info: vi.fn(), error: vi.fn() };
+  return { info: vi.fn(), error: errorLog };
 }
 
 function app(overrides: Partial<PublicWorkerEnv> = {}) {
@@ -168,7 +173,9 @@ describe("Worker public app", () => {
   it("rewrites the sitemap and tags every response with a request id", async () => {
     const response = await app().request("/sitemap.xml");
     expect(response.headers.get("content-type")).toBe("application/xml; charset=utf-8");
-    expect(await response.text()).toBe("<loc>https://tools.example.com/totp</loc>");
+    const sitemap = await response.text();
+    expect(sitemap).toContain("<loc>https://tools.example.com/totp</loc>");
+    expect(sitemap).not.toContain("__SITE_ORIGIN__");
     expect(response.headers.get("x-request-id")).toMatch(/^[0-9a-f-]{36}$/);
   });
 
@@ -178,5 +185,55 @@ describe("Worker public app", () => {
     expect(() =>
       app({ RATE_LIMIT_PER_MINUTE: "0", RATE_LIMIT_PER_HOUR: "0", RATE_LIMIT_PER_DAY: "0" }),
     ).toThrow();
+  });
+
+  describe("DISABLED_TOOLS", () => {
+    const off = { DISABLED_TOOLS: "url-shortener" };
+
+    it("answers 404 on the link API but keeps existing short links working", async () => {
+      await createLink(app(), "kept");
+
+      const subject = app(off);
+      expect((await createLink(subject, "new")).status).toBe(404);
+      expect((await subject.request("/api/links/kept/stats")).status).toBe(404);
+      expect((await subject.request("/api/health")).status).toBe(200);
+
+      const redirect = await subject.request("/s/kept");
+      expect(redirect.status).toBe(302);
+      expect(redirect.headers.get("location")).toBe("https://example.com/docs");
+    });
+
+    it("drops the tool from the sitemap and the page metadata", async () => {
+      const subject = app(off);
+      const sitemap = await (await subject.request("/sitemap.xml")).text();
+      expect(sitemap).toContain("https://tools.example.com/totp");
+      expect(sitemap).not.toContain("url-shortener");
+
+      const html = await (await subject.request("/url-shortener")).text();
+      expect(html).toContain('<meta name="disabled-tools" content="url-shortener" />');
+      expect(html).toContain('href="https://tools.example.com/totp"');
+    });
+
+    it("leaves everything on when the variable is empty or missing", async () => {
+      for (const subject of [app(), app({ DISABLED_TOOLS: "" })]) {
+        expect((await createLink(subject, `on${Math.random().toString(36).slice(2, 8)}`, "198.51.100.77")).status).toBe(201);
+        expect(await (await subject.request("/sitemap.xml")).text()).toContain("url-shortener");
+        expect(await (await subject.request("/totp")).text()).not.toContain("disabled-tools");
+      }
+    });
+
+    it("ignores a list that disables every tool, and logs it", async () => {
+      errorLog.mockClear();
+      const subject = app({ DISABLED_TOOLS: "totp,url-shortener" });
+      expect(await (await subject.request("/sitemap.xml")).text()).toContain("url-shortener");
+      expect(errorLog).toHaveBeenCalledWith("config_ignored", { reason: "all_tools_disabled" });
+    });
+
+    it("ignores unknown ids and logs them", async () => {
+      errorLog.mockClear();
+      const subject = app({ DISABLED_TOOLS: "url_shortener" });
+      expect((await createLink(subject, "typo", "198.51.100.78")).status).toBe(201);
+      expect(errorLog).toHaveBeenCalledWith("config_ignored", { reason: "unknown_tool_id" });
+    });
   });
 });

@@ -1,7 +1,9 @@
+import { fallbackToolId } from "../../app/disabledTools";
 import {
   DEFAULT_SEO_TOOL_ID,
   seoToolIdFromPathname,
   toolSeoData,
+  type SeoToolId,
 } from "../../app/toolSeoData";
 
 export const SITE_ORIGIN_PLACEHOLDER = "__SITE_ORIGIN__";
@@ -22,14 +24,18 @@ function escapeHtml(value: string): string {
 /**
  * Renders the SPA shell for a request path so crawlers that do not run
  * JavaScript still see the title, description, canonical URL and structured
- * data of the tool the path belongs to.
+ * data of the tool the path belongs to. Disabled tools resolve to the fallback
+ * tool, and their ids are published in a meta tag the app reads to hide them
+ * (a meta tag, because the CSP blocks inline scripts).
  */
 export function renderIndexHtml(
   source: string,
   origin: string,
   pathname: string,
+  disabled: ReadonlySet<SeoToolId> = new Set(),
 ): string {
-  const toolId = seoToolIdFromPathname(pathname);
+  const requested = seoToolIdFromPathname(pathname);
+  const toolId = disabled.has(requested) ? fallbackToolId(disabled) : requested;
   const seo = toolSeoData[toolId];
   const url = `${SITE_ORIGIN_PLACEHOLDER}/${toolId}`;
 
@@ -65,7 +71,27 @@ export function renderIndexHtml(
     );
   }
 
+  if (disabled.size > 0) {
+    const meta = `<meta name="disabled-tools" content="${escapeHtml([...disabled].join(","))}" />\n  </head>`;
+    html = html.replace("</head>", () => meta);
+  }
+
   return renderSiteOrigin(html, origin);
+}
+
+const SITEMAP_ENTRY = /\s*<url>[\s\S]*?<\/url>/g;
+const SITEMAP_LOC = /<loc>[^<]*\/([^/<]+)<\/loc>/;
+
+/** Drops the sitemap entries of disabled tools. */
+export function renderSitemap(
+  source: string,
+  disabled: ReadonlySet<SeoToolId>,
+): string {
+  if (disabled.size === 0) return source;
+  return source.replace(SITEMAP_ENTRY, (entry) => {
+    const id = SITEMAP_LOC.exec(entry)?.[1];
+    return id !== undefined && disabled.has(id as SeoToolId) ? "" : entry;
+  });
 }
 
 export function renderSiteOrigin(source: string, origin: string): string {
