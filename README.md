@@ -44,6 +44,18 @@ Every push to `main` deploys the Worker. The Worker `web-tools` is connected to 
 
 The deploy command applies new D1 migrations before the new code goes live. CI (`.github/workflows/ci.yml`) runs tests, typecheck and `wrangler deploy --dry-run` on pushes and pull requests, but it does not deploy.
 
+### Pull request Previews
+
+Workers Builds uses `npx wrangler preview` for pull request branches. Previews
+share the `web-tools-url-shortener-preview` D1 database and use their own URL
+as the origin for short links.
+
+Before previewing changes that add a migration, apply it to the Preview database.
+
+```bash
+npx wrangler d1 migrations apply DB --remote --config wrangler.preview-migrations.toml
+```
+
 ### Manual
 
 ```bash
@@ -57,6 +69,7 @@ npm run cf:deploy
 1. Create the database with `npx wrangler d1 create web-tools-url-shortener` and put the returned `database_id` in `wrangler.toml`.
 2. Change `routes` and `PUBLIC_BASE_URL` in `wrangler.toml` to your domain. The domain's zone must be on Cloudflare with a proxied DNS record, or use a Custom Domain instead of a route.
 3. Apply migrations and deploy as above.
+4. For pull request Previews, create a separate `web-tools-url-shortener-preview` D1 database, set its ID in both Wrangler files, and apply the Preview migrations.
 
 ### Configuration
 

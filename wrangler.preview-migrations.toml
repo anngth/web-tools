@@ -1,0 +1,5 @@
+[[d1_databases]]
+binding = "DB"
+database_name = "web-tools-url-shortener-preview"
+database_id = "28032caa-4ceb-4c28-aeb9-4401e2e8bc6e"
+migrations_dir = "src/worker/short-links/migrations"

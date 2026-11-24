@@ -40,3 +40,9 @@ binding = "DB"
 database_name = "web-tools-url-shortener"
 database_id = "e497bb3c-5742-44e1-a7fd-3fa35706354e"
 migrations_dir = "src/worker/short-links/migrations"
+
+# Previews use their request origin and the Worker's default limits.
+[[previews.d1_databases]]
+binding = "DB"
+database_name = "web-tools-url-shortener-preview"
+database_id = "28032caa-4ceb-4c28-aeb9-4401e2e8bc6e"
