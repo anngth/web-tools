@@ -23,6 +23,13 @@ npm run test:all
 npm run typecheck
 ```
 
+## TOTP input
+
+Paste a Base32 key or a TOTP setup URI into the generator. To import from a
+web link, put the encoded setup URI after `#` on the `/totp` page. The
+generator clears the fragment after reading it. If you previously passed a
+real key in a web URL query string, rotate it at the service that issued it.
+
 ## Deploy to Cloudflare
 
 ### Automatic (Workers Builds)

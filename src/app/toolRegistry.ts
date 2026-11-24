@@ -19,7 +19,7 @@ const allTools: ToolDefinition[] = [
   {
     id: "totp",
     label: "TOTP Generator",
-    description: "RFC 6238 · HMAC-SHA1",
+    description: "RFC 6238 · Time-based one-time passwords",
     Icon: ShieldCheck,
     Page: TotpPage,
   },

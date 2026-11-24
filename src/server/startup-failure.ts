@@ -2,6 +2,7 @@ export type StartupFailureReason =
   | "public_base_url_missing"
   | "public_base_url_invalid"
   | "trust_proxy_invalid"
+  | "trusted_proxy_ips_invalid"
   | "rate_limit_invalid"
   | "cleanup_interval_invalid"
   | "ttl_invalid"
@@ -19,6 +20,7 @@ const MESSAGES: Record<StartupFailureReason, string> = {
   public_base_url_missing: "PUBLIC_BASE_URL is required in production",
   public_base_url_invalid: "PUBLIC_BASE_URL configuration is invalid",
   trust_proxy_invalid: "TRUST_PROXY configuration is invalid",
+  trusted_proxy_ips_invalid: "TRUSTED_PROXY_IPS must list proxy IPs when TRUST_PROXY is true",
   rate_limit_invalid: "RATE_LIMIT configuration is invalid",
   cleanup_interval_invalid: "CLEANUP_INTERVAL_SECONDS configuration is invalid",
   ttl_invalid: GENERIC_MESSAGE,

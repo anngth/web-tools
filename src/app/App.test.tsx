@@ -101,6 +101,29 @@ describe("App tool registry integration", () => {
     expect(window.location.pathname).toBe("/totp");
   });
 
+  it("clears legacy TOTP query parameters without importing them", () => {
+    window.history.replaceState(null, "", "/totp?secret=JBSWY3DPEHPK3PXP&theme=dark");
+    render(<App />);
+
+    expect(screen.getByRole("textbox")).toHaveValue("");
+    expect(screen.getByRole("button", { name: "No token to copy" })).toBeDisabled();
+    expect(window.location.search).toBe("?theme=dark");
+  });
+
+  it("imports a setup URI from the fragment and uses its digits and period", async () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(119_000);
+    const uri = "otpauth://totp/RFC6238?secret=GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ&digits=8&period=60";
+    window.history.replaceState(null, "", `/totp#${encodeURIComponent(uri)}`);
+    try {
+      render(<App />);
+      expect(await screen.findByText("94287082")).toBeVisible();
+      expect(screen.getByText("Refreshes in 1s")).toBeVisible();
+      expect(window.location.hash).toBe("");
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   it("widens only the URL shortener column", async () => {
     const user = userEvent.setup();
     render(<App />);

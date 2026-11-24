@@ -17,7 +17,11 @@ import {
 import { createJsonLogger, type AppLogger } from "./http/logger";
 import { createPublicApp } from "./http/public-app";
 import { parseRateLimitRules, type RateLimitEnvironment } from "./http/limits-config";
-import { createRateLimiter, resolveClientKey } from "./http/rate-limiter";
+import {
+  createRateLimiter,
+  parseTrustedProxyIps,
+  resolveClientKey,
+} from "./http/rate-limiter";
 import { StartupFailure, startupFailureReason } from "./startup-failure.ts";
 
 export { CLEANUP_INTERVAL_MS };
@@ -31,6 +35,7 @@ interface DockerServerEnvironment
   NODE_ENV?: string;
   PUBLIC_BASE_URL?: string;
   TRUST_PROXY?: string;
+  TRUSTED_PROXY_IPS?: string;
   CLEANUP_INTERVAL_SECONDS?: string;
 }
 
@@ -91,7 +96,7 @@ const defaultDependencies: DockerServerDependencies = {
 };
 
 export function createNodeClientKeyResolver(
-  trustProxy: boolean,
+  trustedProxyIps: ReadonlySet<string> | undefined,
   getConnectionInformation: GetConnInfo = getConnInfo,
 ): (context: Context) => string {
   return (context) => {
@@ -102,7 +107,7 @@ export function createNodeClientKeyResolver(
     return resolveClientKey({
       peerAddress,
       xForwardedFor: context.req.header("x-forwarded-for"),
-      trustProxy,
+      trustedProxyIps,
     });
   };
 }
@@ -114,7 +119,10 @@ export async function startDockerServer(options: {
   const env = options.env ?? process.env;
   const dependencies = options.dependencies ?? defaultDependencies;
   const publicBaseUrl = validatePublicBaseUrl(env.PUBLIC_BASE_URL, env.NODE_ENV);
-  const trustProxy = parseTrustProxy(env.TRUST_PROXY);
+  const trustedProxyIps = parseTrustedProxyConfig(
+    env.TRUST_PROXY,
+    env.TRUSTED_PROXY_IPS,
+  );
   let rateLimitRules;
   try {
     rateLimitRules = parseRateLimitRules(env);
@@ -145,7 +153,7 @@ export async function startDockerServer(options: {
     backend: selection.backend,
     publicBaseUrl,
     getClientKey: createNodeClientKeyResolver(
-      trustProxy,
+      trustedProxyIps,
       dependencies.getConnectionInfo,
     ),
     limiter,
@@ -248,10 +256,16 @@ export async function startDockerServer(options: {
   return { shutdown };
 }
 
-function parseTrustProxy(value: string | undefined): boolean {
-  if (value === undefined || value === "false") return false;
-  if (value === "true") return true;
-    throw new StartupFailure("trust_proxy_invalid");
+function parseTrustedProxyConfig(
+  enabled: string | undefined,
+  addresses: string | undefined,
+): ReadonlySet<string> | undefined {
+  if (enabled === undefined || enabled === "false") return undefined;
+  if (enabled !== "true") throw new StartupFailure("trust_proxy_invalid");
+
+  const trustedProxyIps = parseTrustedProxyIps(addresses ?? "");
+  if (trustedProxyIps === undefined) throw new StartupFailure("trusted_proxy_ips_invalid");
+  return trustedProxyIps;
 }
 
 function validatePublicBaseUrl(

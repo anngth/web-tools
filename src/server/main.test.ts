@@ -119,6 +119,8 @@ describe("startDockerServer configuration and startup", () => {
     ["missing PUBLIC_BASE_URL", { ...VALID_ENV, PUBLIC_BASE_URL: undefined }, "public_base_url_missing"],
     ["invalid PUBLIC_BASE_URL", { ...VALID_ENV, PUBLIC_BASE_URL: "https://sho.rt/path" }, "public_base_url_invalid"],
     ["invalid TRUST_PROXY", { ...VALID_ENV, TRUST_PROXY: "yes" }, "trust_proxy_invalid"],
+    ["missing TRUSTED_PROXY_IPS", { ...VALID_ENV, TRUST_PROXY: "true" }, "trusted_proxy_ips_invalid"],
+    ["invalid TRUSTED_PROXY_IPS", { ...VALID_ENV, TRUST_PROXY: "true", TRUSTED_PROXY_IPS: "proxy.local" }, "trusted_proxy_ips_invalid"],
     ["invalid RATE_LIMIT_PER_HOUR", { ...VALID_ENV, RATE_LIMIT_PER_HOUR: "lots" }, "rate_limit_invalid"],
     ["invalid CLEANUP_INTERVAL_SECONDS", { ...VALID_ENV, CLEANUP_INTERVAL_SECONDS: "0" }, "cleanup_interval_invalid"],
     ["invalid CLEANUP_INTERVAL_SECONDS word", { ...VALID_ENV, CLEANUP_INTERVAL_SECONDS: "soon" }, "cleanup_interval_invalid"],
@@ -137,6 +139,17 @@ describe("startDockerServer configuration and startup", () => {
 
     expect(harness.dependencies.createBackend).not.toHaveBeenCalled();
     expect(harness.dependencies.listen).not.toHaveBeenCalled();
+  });
+
+  it("uses the configured proxy allowlist for the app client key", async () => {
+    const harness = createHarness();
+    await startDockerServer({
+      env: { ...VALID_ENV, TRUST_PROXY: "true", TRUSTED_PROXY_IPS: "::ffff:127.0.0.1, 192.0.2.10" },
+      dependencies: harness.dependencies,
+    });
+    const [{ getClientKey }] = vi.mocked(harness.dependencies.createApp).mock.calls[0];
+    const context = { req: { header: () => "203.0.113.9, 192.0.2.10" } } as unknown as Context;
+    expect(getClientKey(context)).toBe("203.0.113.9");
   });
 
   it("creates the limiter with default per-minute, per-hour, and per-day quotas", async () => {
@@ -330,21 +343,21 @@ describe("createNodeClientKeyResolver", () => {
     const getConnectionInfo = vi.fn(() => ({
       remote: { address: "192.0.2.10", addressType: "IPv4" as const },
     }));
-    const resolve = createNodeClientKeyResolver(false, getConnectionInfo);
+    const resolve = createNodeClientKeyResolver(undefined, getConnectionInfo);
 
     expect(resolve(contextWithForwardedFor("203.0.113.9"))).toBe("192.0.2.10");
     expect(getConnectionInfo).toHaveBeenCalledTimes(1);
   });
 
-  it("uses the first valid forwarded address in trusted-proxy mode", () => {
+  it("resolves a client behind an allowlisted Node peer", () => {
     const resolve = createNodeClientKeyResolver(
-      true,
+      new Set(["192.0.2.10"]),
       vi.fn(() => ({
         remote: { address: "192.0.2.10", addressType: "IPv4" as const },
       })),
     );
 
-    expect(resolve(contextWithForwardedFor("unknown, , 2001:db8::1, 203.0.113.9"))).toBe(
+    expect(resolve(contextWithForwardedFor("2001:db8::1"))).toBe(
       "2001:db8::1",
     );
   });

@@ -252,93 +252,60 @@ describe("createRateLimiter", () => {
 });
 
 describe("resolveClientKey", () => {
+  const trustedProxyIps = new Set(["192.0.2.10", "192.0.2.11"]);
+
   it("requires a direct peer address", () => {
-    expect(() =>
-      resolveClientKey({
-        peerAddress: "   ",
-        trustProxy: false,
-      }),
-    ).toThrow("peerAddress is required");
+    expect(() => resolveClientKey({ peerAddress: "   " })).toThrow("peerAddress is required");
   });
 
-  it("uses a non-IP direct peer identifier when proxy trust is disabled", () => {
-    expect(
-      resolveClientKey({
-        peerAddress: "  unix/socket-peer  ",
-        trustProxy: false,
-      }),
-    ).toBe("unix/socket-peer");
+  it("uses a non-IP direct peer identifier", () => {
+    expect(resolveClientKey({ peerAddress: "  unix/socket-peer  " })).toBe("unix/socket-peer");
   });
 
-  it("falls back to a non-IP direct peer identifier when trusted entries are invalid", () => {
-    expect(
-      resolveClientKey({
-        peerAddress: "opaque-peer",
-        xForwardedFor: "unknown, example.com, 198.51.100.4:443",
-        trustProxy: true,
-      }),
-    ).toBe("opaque-peer");
+  it("canonicalizes a direct IP peer", () => {
+    expect(resolveClientKey({ peerAddress: "2001:0DB8:0000:0000:0000:0000:0000:0001" }))
+      .toBe("2001:db8::1");
   });
 
-  it("canonicalizes a direct IP peer when possible", () => {
-    expect(
-      resolveClientKey({
-        peerAddress: "2001:0DB8:0000:0000:0000:0000:0000:0001",
-        trustProxy: false,
-      }),
-    ).toBe("2001:db8::1");
+  it("uses the direct peer when no proxy is configured", () => {
+    expect(resolveClientKey({
+      peerAddress: "203.0.113.9",
+      xForwardedFor: "198.51.100.4",
+    })).toBe("203.0.113.9");
   });
 
-  it("ignores forwarded addresses unless proxy trust is enabled", () => {
-    expect(
-      resolveClientKey({
-        peerAddress: "203.0.113.9",
-        xForwardedFor: "not-an-ip, 198.51.100.4",
-        trustProxy: false,
-      }),
-    ).toBe("203.0.113.9");
+  it("uses the direct peer when it is outside the proxy allowlist", () => {
+    expect(resolveClientKey({
+      peerAddress: "203.0.113.9",
+      xForwardedFor: "198.51.100.4",
+      trustedProxyIps,
+    })).toBe("203.0.113.9");
   });
 
-  it("skips malformed entries and uses the first valid trusted IPv4 address", () => {
-    expect(
-      resolveClientKey({
-        peerAddress: "203.0.113.9",
-        xForwardedFor:
-          "unknown, example.com, 198.51.100.4:443, 198.51.100.4, 192.0.2.1",
-        trustProxy: true,
-      }),
-    ).toBe("198.51.100.4");
+  it("resolves the client across explicitly trusted proxy hops", () => {
+    expect(resolveClientKey({
+      peerAddress: "::ffff:192.0.2.11",
+      xForwardedFor: "2001:0DB8:0000:0000:0000:0000:0000:0001, 192.0.2.10",
+      trustedProxyIps,
+    })).toBe("2001:db8::1");
   });
 
-  it("accepts and canonicalizes the first valid trusted IPv6 address", () => {
-    expect(
-      resolveClientKey({
-        peerAddress: "203.0.113.9",
-        xForwardedFor:
-          "[2001:db8::1], fe80::1%eth0, 2001:0DB8:0000:0000:0000:0000:0000:0001, 198.51.100.4",
-        trustProxy: true,
-      }),
-    ).toBe("2001:db8::1");
+  it("stops at the first untrusted hop from the Node peer", () => {
+    expect(resolveClientKey({
+      peerAddress: "192.0.2.11",
+      xForwardedFor: "198.51.100.4, 203.0.113.9, 192.0.2.10",
+      trustedProxyIps,
+    })).toBe("203.0.113.9");
   });
 
-  it("falls back to the direct peer when no trusted entry is a strict IP token", () => {
-    expect(
-      resolveClientKey({
-        peerAddress: "203.0.113.9",
-        xForwardedFor:
-          "unknown, example.com, 198.51.100.4:443, [2001:db8::1], 01.2.3.4",
-        trustProxy: true,
-      }),
-    ).toBe("203.0.113.9");
-  });
-
-  it("skips empty trusted entries", () => {
-    expect(
-      resolveClientKey({
-        peerAddress: "203.0.113.9",
-        xForwardedFor: "  , , 198.51.100.4",
-        trustProxy: true,
-      }),
-    ).toBe("198.51.100.4");
-  });
+  it.each(["unknown", "", "[2001:db8::1]", "198.51.100.4:443"])(
+    "stops at the last verified hop when the next IP is invalid (%s)",
+    (entry) => {
+      expect(resolveClientKey({
+        peerAddress: "192.0.2.11",
+        xForwardedFor: [entry, "192.0.2.10"].join(", "),
+        trustedProxyIps,
+      })).toBe("192.0.2.10");
+    },
+  );
 });

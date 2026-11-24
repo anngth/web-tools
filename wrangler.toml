@@ -30,6 +30,10 @@ RATE_LIMIT_PER_DAY = "200"
 [observability]
 enabled = true
 
+# Keep application logs and omit invocation events containing request URLs.
+[observability.logs]
+invocation_logs = false
+
 [[d1_databases]]
 binding = "DB"
 database_name = "web-tools-url-shortener"
