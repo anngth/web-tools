@@ -4,18 +4,17 @@ import { Check, Clipboard } from "lucide-react";
 import { copyTextToClipboard } from "../../shared/clipboard";
 import {
   generateTotp,
-  importTotpKey,
-  normalizeSecret,
+  parseTotpInput,
   TOTP_STEP_SECONDS,
 } from "./totp.service";
 import {
-  readSecretFromUrlSearch,
+  readTotpInputFromFragment,
   removeSecretFromAddressBar,
 } from "./totp-url";
 import "./totp.css";
 
 export function TotpPage() {
-  const [secret, setSecret] = useState<string>(readSecretFromUrlSearch);
+  const [secret, setSecret] = useState<string>(readTotpInputFromFragment);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -23,28 +22,21 @@ export function TotpPage() {
   const copiedResetTimeoutRef = useRef<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
-  const normalizedSecret = useMemo(() => normalizeSecret(secret), [secret]);
-
-  const cryptoKeyPromise = useMemo(() => {
-    if (!normalizedSecret) {
-      return Promise.resolve(null);
+  const parsedInput = useMemo(() => {
+    try {
+      return { config: parseTotpInput(secret), error: "" };
+    } catch (error) {
+      return {
+        config: null,
+        error: error instanceof Error ? error.message : "Could not read TOTP setup.",
+      };
     }
-    return importTotpKey(normalizedSecret);
-  }, [normalizedSecret]);
-
-  const secondsRemaining = useMemo(() => {
-    const currentSecond = Math.floor(now / 1000);
-    return TOTP_STEP_SECONDS - (currentSecond % TOTP_STEP_SECONDS);
-  }, [now]);
-
-  const currentStep = useMemo(
-    () => Math.floor(now / 1000 / TOTP_STEP_SECONDS),
-    [now],
-  );
-
-  const progressPercentage = useMemo(() => {
-    return (secondsRemaining / TOTP_STEP_SECONDS) * 100;
-  }, [secondsRemaining]);
+  }, [secret]);
+  const period = parsedInput.config?.period ?? TOTP_STEP_SECONDS;
+  const currentSecond = Math.floor(now / 1000);
+  const currentStep = Math.floor(currentSecond / period);
+  const secondsRemaining = period - (currentSecond % period);
+  const progressPercentage = (secondsRemaining / period) * 100;
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -72,23 +64,16 @@ export function TotpPage() {
 
     async function refreshToken() {
       setCopied(false);
-      if (!normalizedSecret) {
+      const { config } = parsedInput;
+      if (config === null) {
         setCode("");
-        setError("");
+        setError(parsedInput.error);
         return;
       }
 
       try {
-        const cryptoKey = await cryptoKeyPromise;
-        if (!cryptoKey) {
-          return;
-        }
-        const stepTimestamp = currentStep * TOTP_STEP_SECONDS * 1000;
-        const nextCode = await generateTotp(
-          normalizedSecret,
-          stepTimestamp,
-          cryptoKey,
-        );
+        const stepTimestamp = currentStep * config.period * 1000;
+        const nextCode = await generateTotp(config, stepTimestamp);
         if (!cancelled) {
           setCode(nextCode);
           setError("");
@@ -107,7 +92,7 @@ export function TotpPage() {
     return () => {
       cancelled = true;
     };
-  }, [cryptoKeyPromise, currentStep, normalizedSecret]);
+  }, [currentStep, parsedInput]);
 
   async function copyCode() {
     if (!code) {
@@ -142,10 +127,10 @@ export function TotpPage() {
   return (
     <div className="panel">
       <label className="field">
-        <span>Base32 Secret Key</span>
+        <span>Secret key or TOTP setup link</span>
         <input
           ref={secretInputRef}
-          autoCapitalize="characters"
+          autoCapitalize="none"
           autoComplete="off"
           autoCorrect="off"
           spellCheck="false"
@@ -157,8 +142,7 @@ export function TotpPage() {
         />
       </label>
       <p id="secret-help" className="helpText">
-        Your secret is processed only in this browser. It is not stored, logged,
-        or sent anywhere. Spaces and lowercase letters are accepted.
+        Paste a Base32 key or an otpauth setup link. The browser generates the code locally.
       </p>
       <p
         id="secret-error"

@@ -1,28 +1,14 @@
-import { parseOtpauthUri } from "./totp.service";
-
 const SENSITIVE_SECRET_PARAMS = ["secret", "key", "s"];
 
-export function readSecretFromUrlSearch(): string {
-  if (typeof window === "undefined") {
-    return "";
-  }
+export function readTotpInputFromFragment(): string {
+  if (typeof window === "undefined") return "";
+
+  const fragment = window.location.hash.slice(1);
+  if (/^otpauth:/i.test(fragment)) return fragment;
 
   try {
-    const params = new URLSearchParams(window.location.search);
-    const raw =
-      params.get("secret") ?? params.get("key") ?? params.get("s") ?? "";
-
-    if (raw) {
-      return (parseOtpauthUri(raw) || raw).trim();
-    }
-
-    if (window.location.hash) {
-      const hashValue = safeDecodeUriComponent(window.location.hash.slice(1));
-      const hashSecret = parseOtpauthUri(hashValue);
-      if (hashSecret) return hashSecret.trim();
-    }
-
-    return "";
+    const decoded = decodeURIComponent(fragment).trim();
+    return /^otpauth:/i.test(decoded) ? decoded : "";
   } catch {
     return "";
   }
@@ -37,9 +23,7 @@ export function removeSecretFromAddressBar() {
   const hasSensitiveParam = SENSITIVE_SECRET_PARAMS.some((param) =>
     url.searchParams.has(param),
   );
-  const hasSensitiveHash = parseOtpauthUri(
-    safeDecodeUriComponent(url.hash.slice(1)),
-  );
+  const hasSensitiveHash = readTotpInputFromFragment() !== "";
 
   if (!hasSensitiveParam && !hasSensitiveHash) {
     return;
@@ -58,12 +42,4 @@ export function removeSecretFromAddressBar() {
     document.title,
     `${url.pathname}${url.search}${url.hash}`,
   );
-}
-
-function safeDecodeUriComponent(value: string): string {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
 }

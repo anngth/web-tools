@@ -6,6 +6,13 @@ How to run the process. Runtime rules are in source, not here.
 
 Production runs on the Cloudflare Worker (below). Node: `npm run be:dev`, with `vite.config.ts` pointed back at port 8080. `be:dev` loads `.env` when that file exists. Variable names are in `.env.example`. Production does not load `.env`. The image and Compose service are `Dockerfile` and `compose.yaml`.
 
+For Node behind a reverse proxy, set `TRUST_PROXY=true` and set
+`TRUSTED_PROXY_IPS` to a comma-separated list of the proxies' exact IPv4 or
+IPv6 addresses. Each trusted proxy must append its actual connection peer to
+`X-Forwarded-For` or replace the header with that address at the edge. The
+server walks the chain from its direct peer and uses the first address outside
+the allowlist. With proxy trust disabled, it uses the direct peer address.
+
 ## Worker (production)
 
 `npm run cf:dev` builds `dist/` and runs the whole app on `http://127.0.0.1:8787`; `npm run fe:dev` proxies `/api` and `/s/` there. Apply local tables first with `wrangler d1 migrations apply web-tools-url-shortener --local`. `npm run cf:test` does not need a running Worker.

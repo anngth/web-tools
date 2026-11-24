@@ -112,30 +112,38 @@ export function createFixedWindowLimiter(options: {
   });
 }
 
+export function parseTrustedProxyIps(value: string): ReadonlySet<string> | undefined {
+  const addresses = new Set<string>();
+  for (const entry of value.split(",")) {
+    const address = canonicalizeIp(entry.trim());
+    if (address === undefined) return undefined;
+    addresses.add(address);
+  }
+  return addresses;
+}
+
 export function resolveClientKey(input: {
   peerAddress: string;
   xForwardedFor?: string;
-  trustProxy: boolean;
+  trustedProxyIps?: ReadonlySet<string>;
 }): string {
   const peerAddress = input.peerAddress.trim();
   if (peerAddress.length === 0) {
     throw new Error("peerAddress is required");
   }
 
-  const canonicalPeerAddress = canonicalizeIp(peerAddress) ?? peerAddress;
+  let clientAddress = canonicalizeIp(peerAddress) ?? peerAddress;
+  const { trustedProxyIps, xForwardedFor } = input;
+  if (xForwardedFor === undefined || !trustedProxyIps?.has(clientAddress)) return clientAddress;
 
-  if (!input.trustProxy || input.xForwardedFor === undefined) {
-    return canonicalPeerAddress;
-  }
-
-  for (const entry of input.xForwardedFor.split(",")) {
+  // Each trusted proxy vouches for the hop immediately before it.
+  for (const entry of xForwardedFor.split(",").reverse()) {
     const address = canonicalizeIp(entry.trim());
-    if (address !== undefined) {
-      return address;
-    }
+    if (address === undefined) break;
+    clientAddress = address;
+    if (!trustedProxyIps.has(clientAddress)) break;
   }
-
-  return canonicalPeerAddress;
+  return clientAddress;
 }
 
 function canonicalizeIp(value: string): string | undefined {
@@ -150,7 +158,13 @@ function canonicalizeIp(value: string): string | undefined {
   try {
     const hostname = new URL(`http://[${value}]/`).hostname;
     const canonicalAddress = hostname.slice(1, -1);
-    return isIP(canonicalAddress) === 6 ? canonicalAddress : undefined;
+    if (isIP(canonicalAddress) !== 6) return undefined;
+    const mapped = /^::ffff:([0-9a-f]+):([0-9a-f]+)$/.exec(canonicalAddress);
+    if (mapped === null) return canonicalAddress;
+
+    const high = Number.parseInt(mapped[1], 16);
+    const low = Number.parseInt(mapped[2], 16);
+    return [high >> 8, high & 0xff, low >> 8, low & 0xff].join(".");
   } catch {
     return undefined;
   }
