@@ -151,7 +151,8 @@ export function TotpPage() {
         />
       </label>
       <p id="secret-help" className="helpText">
-        Paste a Base32 key or an otpauth setup link. The browser generates the code locally.
+        Paste a Base32 key or an otpauth setup link. Your key stays in this tab's
+        memory while the generator is open.
       </p>
       <p
         id="secret-error"
