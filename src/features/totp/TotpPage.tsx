@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { ChangeEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Clipboard } from "lucide-react";
 import { copyTextToClipboard } from "../../shared/clipboard";
 import {
@@ -46,10 +45,27 @@ export function TotpPage() {
     return () => window.clearInterval(intervalId);
   }, []);
 
+  const updateTotpInput = useCallback((value: string) => {
+    setSecret(value);
+    setCode("");
+    setError("");
+    setCopied(false);
+  }, []);
+
   useEffect(() => {
     secretInputRef.current?.focus();
     removeSecretFromAddressBar();
-  }, []);
+
+    function importSetupFragment() {
+      const setup = readTotpInputFromFragment();
+      if (!setup) return;
+      updateTotpInput(setup);
+      removeSecretFromAddressBar();
+    }
+
+    window.addEventListener("hashchange", importSetupFragment);
+    return () => window.removeEventListener("hashchange", importSetupFragment);
+  }, [updateTotpInput]);
 
   useEffect(() => {
     return () => {
@@ -117,13 +133,6 @@ export function TotpPage() {
     setError("Could not copy token. Check browser clipboard permission.");
   }
 
-  function handleSecretChange(event: ChangeEvent<HTMLInputElement>) {
-    setSecret(event.target.value);
-    setCode("");
-    setError("");
-    setCopied(false);
-  }
-
   return (
     <div className="panel">
       <label className="field">
@@ -136,7 +145,7 @@ export function TotpPage() {
           spellCheck="false"
           type="text"
           value={secret}
-          onChange={handleSecretChange}
+          onChange={(event) => updateTotpInput(event.target.value)}
           placeholder="JBSWY3DPEHPK3PXP, 6rb5 m3a2 rcf6 np6i qbyg r6pf sf4r ghkd"
           aria-describedby="secret-help secret-error"
         />
