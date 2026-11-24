@@ -141,15 +141,26 @@ describe("startDockerServer configuration and startup", () => {
     expect(harness.dependencies.listen).not.toHaveBeenCalled();
   });
 
-  it("uses the configured proxy allowlist for the app client key", async () => {
+  it.each([
+    {
+      name: "uses the forwarded client address when the connection peer is allowlisted",
+      trustedProxyIps: "::ffff:127.0.0.1, 192.0.2.10",
+      expectedClientKey: "203.0.113.9",
+    },
+    {
+      name: "uses the connection peer when it is outside the proxy allowlist",
+      trustedProxyIps: "192.0.2.10",
+      expectedClientKey: "127.0.0.1",
+    },
+  ])("$name", async ({ trustedProxyIps, expectedClientKey }) => {
     const harness = createHarness();
     await startDockerServer({
-      env: { ...VALID_ENV, TRUST_PROXY: "true", TRUSTED_PROXY_IPS: "::ffff:127.0.0.1, 192.0.2.10" },
+      env: { ...VALID_ENV, TRUST_PROXY: "true", TRUSTED_PROXY_IPS: trustedProxyIps },
       dependencies: harness.dependencies,
     });
     const [{ getClientKey }] = vi.mocked(harness.dependencies.createApp).mock.calls[0];
     const context = { req: { header: () => "203.0.113.9, 192.0.2.10" } } as unknown as Context;
-    expect(getClientKey(context)).toBe("203.0.113.9");
+    expect(getClientKey(context)).toBe(expectedClientKey);
   });
 
   it("creates the limiter with default per-minute, per-hour, and per-day quotas", async () => {

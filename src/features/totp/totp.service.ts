@@ -136,13 +136,20 @@ export function counterToBytes(counter: number): ArrayBuffer {
 export async function generateTotp(
   input: string | TotpInput,
   timestamp: number,
-  cryptoKey?: CryptoKey,
 ): Promise<string> {
   const { secret, algorithm, digits, period } = typeof input === "string"
     ? { secret: input, ...DEFAULT_TOTP_OPTIONS }
     : input;
-  const key = cryptoKey ?? (await importTotpKey(secret, algorithm));
-  if (key === null) return "";
+  const keyBytes = decodeBase32(secret);
+  if (keyBytes.length === 0) return "";
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    keyBytes,
+    { name: "HMAC", hash: algorithm },
+    false,
+    ["sign"],
+  );
 
   const counter = Math.floor(timestamp / 1000 / period);
   const signature = await crypto.subtle.sign(
@@ -159,22 +166,4 @@ export async function generateTotp(
     (hmac[offset + 3] & 0xff);
 
   return String(binary % 10 ** digits).padStart(digits, "0");
-}
-
-export async function importTotpKey(
-  secret: string,
-  algorithm: TotpAlgorithm = DEFAULT_TOTP_OPTIONS.algorithm,
-): Promise<CryptoKey | null> {
-  const keyBytes = decodeBase32(secret);
-  if (keyBytes.length === 0) {
-    return null;
-  }
-
-  return crypto.subtle.importKey(
-    "raw",
-    keyBytes,
-    { name: "HMAC", hash: algorithm },
-    false,
-    ["sign"],
-  );
 }
